@@ -1,0 +1,36 @@
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.py[co]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ICE user data (saved articles, jobs, uploads) — never commit
+ICE_Local/data/
+
+# Release build output (tools/build_windows_release.py)
+output/
+
+# Logs / env
+*.log
+.env
+
+
+# Generated XML exports and packaged output (may contain article metadata)
+Generated_XMLs/

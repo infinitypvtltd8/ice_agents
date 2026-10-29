@@ -1,0 +1,1130 @@
+{
+  "profile_id": "supplied_ani_samples_v1",
+  "status": "OBSERVED_PROFILE_NOT_CLIENT_XSD",
+  "namespace_bindings": {
+    "a": "http://www.elsevier.com/xml/ani/ani",
+    "ce": "http://www.elsevier.com/xml/ani/common",
+    "xml": "http://www.w3.org/XML/1998/namespace"
+  },
+  "serialization": {
+    "default_namespace": "http://www.elsevier.com/xml/ani/ani",
+    "common_prefix": "ce",
+    "encoding": "UTF-8",
+    "declaration": true,
+    "pretty_print": "must not change mixed-content text"
+  },
+  "xpath_aliases": {
+    "B": "/a:units/a:unit/a:unit-content/a:bibrecord",
+    "H": "B/a:head",
+    "F": "H/a:author-group/a:affiliation OR H/a:correspondence/a:affiliation",
+    "R": "B/a:tail/a:bibliography/a:reference"
+  },
+  "observed_constants": {
+    "unit_type": "ARTICLE",
+    "unit_id": "1",
+    "order_id": "unknown",
+    "parcel_id": "none",
+    "supplier_id": "4",
+    "status_state": "new",
+    "citation_type": "ar",
+    "language": "ENG",
+    "original": "y",
+    "source_id": "???"
+  },
+  "production_unconfirmed": [
+    "order_id",
+    "parcel_id",
+    "supplier_id",
+    "source_id",
+    "unit_id_policy",
+    "language_policy",
+    "inline_math_mapping",
+    "xsd"
+  ],
+  "sample_timestamp": "2026-09-18T06:21:42.291731Z",
+  "timestamp_policy": "Dynamic explicit UTC export event input; freeze per revision; sample timestamp is not a production constant.",
+  "child_order": {
+    "units": [
+      "unit"
+    ],
+    "unit": [
+      "unit-info",
+      "unit-content"
+    ],
+    "unit-info": [
+      "unit-id",
+      "order-id",
+      "parcel-id",
+      "supplier-id",
+      "timestamp"
+    ],
+    "unit-content": [
+      "bibrecord"
+    ],
+    "bibrecord": [
+      "item-info",
+      "head",
+      "tail"
+    ],
+    "item-info": [
+      "status",
+      "itemidlist"
+    ],
+    "itemidlist": [
+      "itemid"
+    ],
+    "head": [
+      "citation-info",
+      "citation-title",
+      "author-group*",
+      "correspondence*",
+      "abstracts",
+      "source"
+    ],
+    "citation-info": [
+      "citation-type",
+      "citation-language",
+      "abstract-language",
+      "author-keywords?"
+    ],
+    "author-group": [
+      "author+",
+      "affiliation?"
+    ],
+    "author": [
+      "ce:initials",
+      "ce:surname",
+      "ce:given-name?",
+      "ce:e-address?"
+    ],
+    "affiliation": [
+      "organization*",
+      "address-part*",
+      "city?",
+      "state?",
+      "postal-code?",
+      "country?",
+      "ce:source-text"
+    ],
+    "correspondence": [
+      "person",
+      "affiliation?",
+      "ce:e-address?"
+    ],
+    "person": [
+      "ce:initials",
+      "ce:surname",
+      "ce:given-name?"
+    ],
+    "abstracts": [
+      "abstract"
+    ],
+    "abstract": [
+      "ce:para"
+    ],
+    "tail": [
+      "bibliography"
+    ],
+    "bibliography": [
+      "reference*"
+    ],
+    "reference": [
+      "ref-info",
+      "ref-fulltext",
+      "ce:source-text"
+    ]
+  },
+  "order_note": "Ordering is observed. Repetition/optional notation is an implementation contract with documented proposed omissions, not formal XSD cardinality.",
+  "mappings": [
+    {
+      "xpath": "/a:units",
+      "data_field": "document wrapper",
+      "authority": "template",
+      "presence": "one per exported file",
+      "rule_id": "XML-001"
+    },
+    {
+      "xpath": "/a:units/a:unit/@type",
+      "data_field": "profile.unit_type",
+      "authority": "configurable constant ARTICLE",
+      "presence": "one in each sample",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "/a:units/a:unit/a:unit-info/a:unit-id",
+      "data_field": "delivery.unit_id",
+      "authority": "run/delivery profile; samples use 1",
+      "presence": "one",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "/a:units/a:unit/a:unit-info/a:order-id",
+      "data_field": "delivery.order_id",
+      "authority": "profile; observed unknown is unconfirmed",
+      "presence": "one",
+      "rule_id": "XML-005"
+    },
+    {
+      "xpath": "/a:units/a:unit/a:unit-info/a:parcel-id",
+      "data_field": "delivery.parcel_id",
+      "authority": "profile; observed none is unconfirmed",
+      "presence": "one",
+      "rule_id": "XML-005"
+    },
+    {
+      "xpath": "/a:units/a:unit/a:unit-info/a:supplier-id",
+      "data_field": "delivery.supplier_id",
+      "authority": "profile; observed 4, not a universal constant",
+      "presence": "one",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "/a:units/a:unit/a:unit-info/a:timestamp",
+      "data_field": "run_context.export_timestamp_utc",
+      "authority": "explicit dynamic run input, frozen per export revision",
+      "presence": "one",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "B/a:item-info/a:status/@state",
+      "data_field": "profile.item_state",
+      "authority": "configurable constant new",
+      "presence": "one",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "B/a:item-info/a:itemidlist/a:itemid[@idtype=\"ARXIV\"]",
+      "data_field": "article.base_id + v + article.version",
+      "authority": "PDF, verified by Scrapping and HTML",
+      "presence": "one",
+      "rule_id": "ID-005"
+    },
+    {
+      "xpath": "H/a:citation-info/a:citation-type/@code",
+      "data_field": "profile.citation_type",
+      "authority": "configurable constant ar",
+      "presence": "one",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "H/a:citation-info/a:citation-language/@xml:lang",
+      "data_field": "article.language",
+      "authority": "explicit language profile; all samples ENG",
+      "presence": "one",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "H/a:citation-info/a:abstract-language/@xml:lang",
+      "data_field": "abstract.language",
+      "authority": "explicit language profile; all samples ENG",
+      "presence": "one in samples",
+      "rule_id": "XML-004"
+    },
+    {
+      "xpath": "H/a:citation-info/a:author-keywords/a:author-keyword",
+      "data_field": "article.keywords[]",
+      "authority": "PDF only; omit container if absent",
+      "presence": "one per keyword when present",
+      "rule_id": "KEY-001"
+    },
+    {
+      "xpath": "H/a:citation-title/a:titletext",
+      "data_field": "article.title.rich_text",
+      "authority": "PDF, HTML verification; original=y and xml:lang=ENG in samples",
+      "presence": "one",
+      "rule_id": "TITLE-001"
+    },
+    {
+      "xpath": "H/a:author-group/@seq",
+      "data_field": "derived group position",
+      "authority": "PDF affiliation order; 1-based contiguous",
+      "presence": "one per group",
+      "rule_id": "AFF-016"
+    },
+    {
+      "xpath": "H/a:author-group/a:author/@seq",
+      "data_field": "author.global_seq",
+      "authority": "global PDF sequence, not group-local position",
+      "presence": "one per membership occurrence",
+      "rule_id": "AUTHOR-008"
+    },
+    {
+      "xpath": "H/a:author-group/a:author/@orcid",
+      "data_field": "author.orcid.selected",
+      "authority": "PDF visible value or PDF hyperlink",
+      "presence": "optional attribute",
+      "rule_id": "ORCID-002"
+    },
+    {
+      "xpath": "H/a:author-group/a:author/ce:initials",
+      "data_field": "author.initials",
+      "authority": "deterministic derivation from accepted name",
+      "presence": "one per author in samples",
+      "rule_id": "AUTHOR-005"
+    },
+    {
+      "xpath": "H/a:author-group/a:author/ce:surname",
+      "data_field": "author.surname",
+      "authority": "matched API keyname; reviewed PDF fallback",
+      "presence": "one per author in samples",
+      "rule_id": "AUTHOR-004"
+    },
+    {
+      "xpath": "H/a:author-group/a:author/ce:given-name",
+      "data_field": "author.given_name",
+      "authority": "matched API forenames; omit if absent",
+      "presence": "optional; absent in 6 occurrences",
+      "rule_id": "AUTHOR-004"
+    },
+    {
+      "xpath": "H/a:author-group/a:author/ce:e-address",
+      "data_field": "author.email.selected",
+      "authority": "PDF only",
+      "presence": "zero or one per occurrence",
+      "rule_id": "EMAIL-001"
+    },
+    {
+      "xpath": "F/a:organization",
+      "data_field": "affiliation.organizations[]",
+      "authority": "ordered PDF components",
+      "presence": "zero or more",
+      "rule_id": "AFF-007"
+    },
+    {
+      "xpath": "F/a:address-part",
+      "data_field": "affiliation.address_parts[]",
+      "authority": "PDF components including non-state subdivisions",
+      "presence": "zero or more",
+      "rule_id": "AFF-010"
+    },
+    {
+      "xpath": "F/a:city",
+      "data_field": "affiliation.city",
+      "authority": "PDF only",
+      "presence": "optional",
+      "rule_id": "AFF-008"
+    },
+    {
+      "xpath": "F/a:state",
+      "data_field": "affiliation.state",
+      "authority": "PDF with country-specific dictionary",
+      "presence": "optional",
+      "rule_id": "AFF-009"
+    },
+    {
+      "xpath": "F/a:postal-code",
+      "data_field": "affiliation.postal_code",
+      "authority": "PDF; string preserves leading zeros",
+      "presence": "optional",
+      "rule_id": "AFF-007"
+    },
+    {
+      "xpath": "F/a:country/@iso-code",
+      "data_field": "affiliation.country_code",
+      "authority": "approved mapping of source-supplied wording",
+      "presence": "optional; sample country elements have no text",
+      "rule_id": "AFF-011"
+    },
+    {
+      "xpath": "F/ce:source-text",
+      "data_field": "affiliation.source_text",
+      "authority": "complete PDF affiliation text, without marker; wording retained",
+      "presence": "one for every emitted affiliation",
+      "rule_id": "AFF-007"
+    },
+    {
+      "xpath": "H/a:correspondence/a:person/ce:initials",
+      "data_field": "corresponding_author.initials",
+      "authority": "same canonical identity as authors",
+      "presence": "one per person in samples",
+      "rule_id": "CORR-006"
+    },
+    {
+      "xpath": "H/a:correspondence/a:person/ce:surname",
+      "data_field": "corresponding_author.surname",
+      "authority": "same canonical identity as authors",
+      "presence": "one per person in samples",
+      "rule_id": "CORR-006"
+    },
+    {
+      "xpath": "H/a:correspondence/a:person/ce:given-name",
+      "data_field": "corresponding_author.given_name",
+      "authority": "same canonical identity as authors",
+      "presence": "optional",
+      "rule_id": "CORR-006"
+    },
+    {
+      "xpath": "H/a:correspondence/a:affiliation",
+      "data_field": "correspondence.affiliation",
+      "authority": "PDF-evidenced correspondence address or identified normal affiliation",
+      "presence": "optional by design; one in each supplied correspondence",
+      "rule_id": "CORR-006"
+    },
+    {
+      "xpath": "H/a:correspondence/ce:e-address",
+      "data_field": "correspondence.email",
+      "authority": "selected PDF email for that author",
+      "presence": "optional by design; one in each supplied correspondence",
+      "rule_id": "CORR-006"
+    },
+    {
+      "xpath": "H/a:abstracts/a:abstract",
+      "data_field": "article.abstract",
+      "authority": "original=y and xml:lang=ENG in samples",
+      "presence": "one in all samples; omissions require review",
+      "rule_id": "ABS-001"
+    },
+    {
+      "xpath": "H/a:abstracts/a:abstract/ce:para",
+      "data_field": "article.abstract.rich_text",
+      "authority": "PDF only; ordered paragraph content",
+      "presence": "one in samples; multi-paragraph policy needs profile extension",
+      "rule_id": "ABS-001"
+    },
+    {
+      "xpath": "H/a:source/@srcid",
+      "data_field": "delivery.source_id",
+      "authority": "profile; observed ??? is unconfirmed",
+      "presence": "one",
+      "rule_id": "XML-005"
+    },
+    {
+      "xpath": "B/a:tail/a:bibliography/@refcount",
+      "data_field": "count of emitted reference nodes",
+      "authority": "derived from final XML DOM",
+      "presence": "one",
+      "rule_id": "REF-017"
+    },
+    {
+      "xpath": "R/@seq",
+      "data_field": "reference.output_seq",
+      "authority": "contiguous source-order sequence",
+      "presence": "one per reference",
+      "rule_id": "REF-016"
+    },
+    {
+      "xpath": "R/a:ref-info",
+      "data_field": "sample-profile empty element",
+      "authority": "all 974 examples are empty; no inferred subfields",
+      "presence": "one per reference",
+      "rule_id": "XML-006"
+    },
+    {
+      "xpath": "R/a:ref-fulltext",
+      "data_field": "reference.export_rich_text",
+      "authority": "PDF source text with detected leading label removed",
+      "presence": "one per reference",
+      "rule_id": "REF-007"
+    },
+    {
+      "xpath": "R/ce:source-text",
+      "data_field": "reference.export_plain_text",
+      "authority": "same work and source evidence; plain text representation",
+      "presence": "one per reference",
+      "rule_id": "REF-007"
+    },
+    {
+      "xpath": "rich text a:sup / a:inf",
+      "data_field": "rich_text script segments",
+      "authority": "PDF evidence and approved inline mapping; ANI namespace",
+      "presence": "observed sup and inf only; not a formula schema",
+      "rule_id": "XML-008"
+    }
+  ],
+  "observed_path_inventory": {
+    "/units": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit": {
+      "count": 20,
+      "attrs": {
+        "type": [
+          "ARTICLE"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-info": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-info/unit-id": {
+      "count": 20,
+      "attrs": {},
+      "values": [
+        "1",
+        "1",
+        "1"
+      ]
+    },
+    "/units/unit/unit-info/order-id": {
+      "count": 20,
+      "attrs": {},
+      "values": [
+        "unknown",
+        "unknown",
+        "unknown"
+      ]
+    },
+    "/units/unit/unit-info/parcel-id": {
+      "count": 20,
+      "attrs": {},
+      "values": [
+        "none",
+        "none",
+        "none"
+      ]
+    },
+    "/units/unit/unit-info/supplier-id": {
+      "count": 20,
+      "attrs": {},
+      "values": [
+        "4",
+        "4",
+        "4"
+      ]
+    },
+    "/units/unit/unit-info/timestamp": {
+      "count": 20,
+      "attrs": {},
+      "values": [
+        "2026-09-18T06:21:42.291731Z",
+        "2026-09-18T06:21:42.291731Z",
+        "2026-09-18T06:21:42.291731Z"
+      ]
+    },
+    "/units/unit/unit-content": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/item-info": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/item-info/status": {
+      "count": 20,
+      "attrs": {
+        "state": [
+          "new"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/item-info/itemidlist": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/item-info/itemidlist/itemid": {
+      "count": 20,
+      "attrs": {
+        "idtype": [
+          "ARXIV"
+        ]
+      },
+      "values": [
+        "2408.09673v1",
+        "2408.09700v1",
+        "2408.09720v1"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-info": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-info/citation-type": {
+      "count": 20,
+      "attrs": {
+        "code": [
+          "ar"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-info/citation-language": {
+      "count": 20,
+      "attrs": {
+        "{http://www.w3.org/XML/1998/namespace}lang": [
+          "ENG"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-info/abstract-language": {
+      "count": 20,
+      "attrs": {
+        "{http://www.w3.org/XML/1998/namespace}lang": [
+          "ENG"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-title": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-title/titletext": {
+      "count": 20,
+      "attrs": {
+        "{http://www.w3.org/XML/1998/namespace}lang": [
+          "ENG"
+        ],
+        "original": [
+          "y"
+        ]
+      },
+      "values": [
+        "Towards the Information-Theoretic Limit of Programmable Photonics",
+        "Modelling Hydrogen-deficient Carbon stars in MESA— The effects of total mass and mass ratio",
+        "Pedestrian Attribute Recognition: A New Benchmark Dataset and A Large Language Model Augmented Framework"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group": {
+      "count": 55,
+      "attrs": {
+        "seq": [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/author": {
+      "count": 119,
+      "attrs": {
+        "seq": [
+          "1",
+          "10",
+          "2",
+          "3",
+          "4",
+          "5",
+          "6",
+          "7",
+          "8",
+          "9"
+        ],
+        "orcid": [
+          "0000-0001-8630-0554",
+          "0000-0002-1634-2756",
+          "0000-0002-2017-8426",
+          "0000-0002-2819-2679",
+          "0000-0002-8608-9514",
+          "0000-0003-0896-6793",
+          "0000-0003-2316-7623"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/author/ce:initials": {
+      "count": 119,
+      "attrs": {},
+      "values": [
+        "R.",
+        "A.",
+        "S.K."
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/author/ce:surname": {
+      "count": 119,
+      "attrs": {},
+      "values": [
+        "Hamerly",
+        "Sludds",
+        "Vadlamani"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/author/ce:given-name": {
+      "count": 113,
+      "attrs": {},
+      "values": [
+        "Ryan",
+        "Alexander",
+        "Sri Krishna"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation": {
+      "count": 54,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/organization": {
+      "count": 100,
+      "attrs": {},
+      "values": [
+        "Research Laboratory of Electronics",
+        "MIT",
+        "NTT Research Inc."
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/address-part": {
+      "count": 11,
+      "attrs": {},
+      "values": [
+        "50 Vassar Street",
+        "940 Stewart Drive",
+        "4750 Walnut Street, Suite 205"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/city": {
+      "count": 41,
+      "attrs": {},
+      "values": [
+        "Cambridge",
+        "Sunnyvale",
+        "College Park"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/state": {
+      "count": 12,
+      "attrs": {},
+      "values": [
+        "MA",
+        "CA",
+        "MD"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/postal-code": {
+      "count": 25,
+      "attrs": {},
+      "values": [
+        "02139",
+        "94085",
+        "20742"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/country": {
+      "count": 44,
+      "attrs": {
+        "iso-code": [
+          "AUS",
+          "BEL",
+          "CHN",
+          "ESP",
+          "FIN",
+          "FRA",
+          "GBR",
+          "IND",
+          "POL",
+          "PRT",
+          "USA",
+          "ZAF"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/affiliation/ce:source-text": {
+      "count": 54,
+      "attrs": {},
+      "values": [
+        "Research Laboratory of Electronics, MIT, 50 Vassar Street, Cambridge, MA 02139, USA",
+        "NTT Research Inc., Physics and Informatics Laboratories, 940 Stewart Drive, Sunnyvale, CA 94085, USA",
+        "Department of Electrical and Computer Engineering, Institute for Research in Electronics and Applied Physics, and Joint Quantum Institute, University of Marylan"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/abstracts": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/abstracts/abstract": {
+      "count": 20,
+      "attrs": {
+        "original": [
+          "y"
+        ],
+        "{http://www.w3.org/XML/1998/namespace}lang": [
+          "ENG"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/abstracts/abstract/ce:para": {
+      "count": 20,
+      "attrs": {},
+      "values": [
+        "Hydrogen-deficient Carbon (HdC) stars are rare, low-mass, chemicallypeculiar, supergiant variables believed to be formed by a double white dwarf(DWD) merger, sp",
+        "Pedestrian Attribute Recognition (PAR) is one of the indispensable tasks in human-centered research. However, existing datasets neglect different domains (e.g.,",
+        "Intraoperative CT imaging serves as a crucial resource for surgical guidance; however, it may not always be readily accessible or practical to implement. In sce"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/abstracts/abstract/ce:para/sup": {
+      "count": 2,
+      "attrs": {},
+      "values": [
+        "√",
+        "2"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/source": {
+      "count": 20,
+      "attrs": {
+        "srcid": [
+          "???"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/tail": {
+      "count": 20,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/tail/bibliography": {
+      "count": 20,
+      "attrs": {
+        "refcount": [
+          "101",
+          "12",
+          "15",
+          "17",
+          "24",
+          "27",
+          "35",
+          "44",
+          "45",
+          "47",
+          "48",
+          "51",
+          "53",
+          "58",
+          "60",
+          "64",
+          "66",
+          "89"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/tail/bibliography/reference": {
+      "count": 974,
+      "attrs": {
+        "seq": [
+          "1",
+          "10",
+          "100",
+          "101",
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "19",
+          "2",
+          "20",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26",
+          "27",
+          "28",
+          "29",
+          "3",
+          "30",
+          "31",
+          "32",
+          "33",
+          "34",
+          "35",
+          "36",
+          "37",
+          "38",
+          "39",
+          "4",
+          "40",
+          "41",
+          "42",
+          "43",
+          "44",
+          "45",
+          "46",
+          "47",
+          "48",
+          "49",
+          "5",
+          "50",
+          "51",
+          "52",
+          "53",
+          "54",
+          "55",
+          "56",
+          "57",
+          "58",
+          "59",
+          "6",
+          "60",
+          "61",
+          "62",
+          "63",
+          "64",
+          "65",
+          "66",
+          "67",
+          "68",
+          "69",
+          "7",
+          "70",
+          "71",
+          "72",
+          "73",
+          "74",
+          "75",
+          "76",
+          "77",
+          "78",
+          "79",
+          "8",
+          "80",
+          "81",
+          "82",
+          "83",
+          "84",
+          "85",
+          "86",
+          "87",
+          "88",
+          "89",
+          "9",
+          "90",
+          "91",
+          "92",
+          "93",
+          "94",
+          "95",
+          "96",
+          "97",
+          "98",
+          "99"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/tail/bibliography/reference/ref-info": {
+      "count": 974,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/tail/bibliography/reference/ref-fulltext": {
+      "count": 974,
+      "attrs": {},
+      "values": [
+        "S. Bartolucci, P. Birchall, H. Bombin, H. Cable, C. Dawson, M. Gimeno-Segovia, E. Johnston, K. Kieling, N. Nickerson, M. Pant et al., “Fusion-based quantum comp",
+        "L. S. Madsen, F. Laudenbach, M. F. Askarani, F. Rortais, T. Vincent, J. F. Bulmer, F. M. Miatto, L. Neuhaus, L. G. Helt, M. J. Collins et al., “Quantum computat",
+        "Y. Shen, N. C. Harris, S. Skirlo, M. Prabhu, T. Baehr-Jones, M. Hochberg, X. Sun, S. Zhao, H. Larochelle, D. Englund et al., “Deep learning with coherent nanoph"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/tail/bibliography/reference/ce:source-text": {
+      "count": 974,
+      "attrs": {},
+      "values": [
+        "S. Bartolucci, P. Birchall, H. Bombin, H. Cable, C. Dawson, M. Gimeno-Segovia, E. Johnston, K. Kieling, N. Nickerson, M. Pant et al., “Fusion-based quantum comp",
+        "L. S. Madsen, F. Laudenbach, M. F. Askarani, F. Rortais, T. Vincent, J. F. Bulmer, F. M. Miatto, L. Neuhaus, L. G. Helt, M. J. Collins et al., “Quantum computat",
+        "Y. Shen, N. C. Harris, S. Skirlo, M. Prabhu, T. Baehr-Jones, M. Hochberg, X. Sun, S. Zhao, H. Larochelle, D. Englund et al., “Deep learning with coherent nanoph"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-info/author-keywords": {
+      "count": 10,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-info/author-keywords/author-keyword": {
+      "count": 38,
+      "attrs": {},
+      "values": [
+        "stars: abundances",
+        "stars: chemically peculiar",
+        "stars: evolution"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/author-group/author/ce:e-address": {
+      "count": 65,
+      "attrs": {},
+      "values": [
+        "courtney.crawford@sydney.edu.au",
+        "jdjinahu@foxmail.com",
+        "lcl1314@foxmail.com"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence": {
+      "count": 12,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/person": {
+      "count": 12,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/person/ce:initials": {
+      "count": 12,
+      "attrs": {},
+      "values": [
+        "C.L.",
+        "X.",
+        "C."
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/person/ce:surname": {
+      "count": 12,
+      "attrs": {},
+      "values": [
+        "Crawford",
+        "Wang",
+        "Li"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/person/ce:given-name": {
+      "count": 11,
+      "attrs": {},
+      "values": [
+        "Courtney L.",
+        "Xiao",
+        "Chenglong"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation": {
+      "count": 12,
+      "attrs": {},
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/organization": {
+      "count": 26,
+      "attrs": {},
+      "values": [
+        "Sydney Institute for Astronomy (SIfA)",
+        "School of Physics",
+        "University of Sydney"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/state": {
+      "count": 1,
+      "attrs": {},
+      "values": [
+        "NSW"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/postal-code": {
+      "count": 6,
+      "attrs": {},
+      "values": [
+        "2006",
+        "678623",
+        "502284"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/country": {
+      "count": 11,
+      "attrs": {
+        "iso-code": [
+          "AUS",
+          "CHN",
+          "FRA",
+          "IND",
+          "ZAF"
+        ]
+      },
+      "values": []
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/ce:source-text": {
+      "count": 12,
+      "attrs": {},
+      "values": [
+        "Sydney Institute for Astronomy (SIfA), School of Physics, University of Sydney, NSW 2006, Australia",
+        "School of Computer Science and Technology, Anhui University, Hefei, China",
+        "School of Artificial Intelligence, Anhui University, Hefei, China"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/ce:e-address": {
+      "count": 12,
+      "attrs": {},
+      "values": [
+        "courtney.crawford@sydney.edu.au",
+        "wangxiaocvpr@foxmail.com",
+        "lcl1314@foxmail.com"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/city": {
+      "count": 10,
+      "attrs": {},
+      "values": [
+        "Hefei",
+        "Hefei",
+        "Palakkad"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/correspondence/affiliation/address-part": {
+      "count": 2,
+      "attrs": {},
+      "values": [
+        "Kerala",
+        "Lynwood"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/citation-title/titletext/inf": {
+      "count": 1,
+      "attrs": {},
+      "values": [
+        "2"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/head/abstracts/abstract/ce:para/inf": {
+      "count": 1,
+      "attrs": {},
+      "values": [
+        "P"
+      ]
+    },
+    "/units/unit/unit-content/bibrecord/tail/bibliography/reference/ref-fulltext/sup": {
+      "count": 4,
+      "attrs": {},
+      "values": [
+        "+",
+        "+",
+        "+"
+      ]
+    }
+  },
+  "do_not_emit_by_default": [
+    "audit",
+    "HOLD",
+    "confidence",
+    "internal-job-id",
+    "EGI",
+    "IPUI",
+    "DOI",
+    "license",
+    "structured-reference-fields-not-in-profile"
+  ],
+  "xsd_validation": {
+    "available": false,
+    "status": "NOT_RUN",
+    "allow_network_fetch": false
+  }
+}

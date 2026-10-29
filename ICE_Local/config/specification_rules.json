@@ -1,0 +1,3183 @@
+{
+  "specification_version": "1.0",
+  "purpose": "Declarative implementation contracts; handlers must be implemented and tested. This file is not an executable extraction engine.",
+  "rules": [
+    {
+      "rule_id": "SYS-001",
+      "name": "No production LLM calls",
+      "stage": "runtime",
+      "priority": 1,
+      "enabled": true,
+      "primary_sources": [
+        "runtime"
+      ],
+      "basis": "Brief 1,35,36",
+      "handler": "sys_001",
+      "handler_contract": "Exclude generative models, LLM SDK calls, agents, embeddings and paid/cloud AI OCR from production processing; no hidden fallback.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "SYS-001"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "SYS-002",
+      "name": "Offline processing boundary",
+      "stage": "runtime",
+      "priority": 2,
+      "enabled": true,
+      "primary_sources": [
+        "runtime"
+      ],
+      "basis": "Design safeguard",
+      "handler": "sys_002",
+      "handler_contract": "Deny network egress from processing workers; disable remote content in document viewers; bundle OCR assets locally.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "SYS-002"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "SYS-003",
+      "name": "Reproducible decisions",
+      "stage": "runtime",
+      "priority": 3,
+      "enabled": true,
+      "primary_sources": [
+        "runtime"
+      ],
+      "basis": "Brief 31,34",
+      "handler": "sys_003",
+      "handler_contract": "Pin engine, OCR model, parser, dictionary, rule and template versions; use stable ordering and an explicit as-of date.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "SYS-003"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "normalization_version": "1.0",
+        "clock_source": "run_context.as_of_date",
+        "audit_timestamps_excluded_from_semantic_equality": true
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "SYS-004",
+      "name": "Measured diagnostics",
+      "stage": "runtime",
+      "priority": 4,
+      "enabled": true,
+      "primary_sources": [
+        "runtime"
+      ],
+      "basis": "Brief 36; design safeguard",
+      "handler": "sys_004",
+      "handler_contract": "Display observed network attempts and enforcement state; never use a hard-coded zero counter as evidence of zero AI calls.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "SYS-004"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PKG-001",
+      "name": "Package identity",
+      "stage": "ingestion",
+      "priority": 5,
+      "enabled": true,
+      "primary_sources": [
+        "all files"
+      ],
+      "basis": "Brief 3",
+      "handler": "pkg_001",
+      "handler_contract": "Match basename ID candidates to IDs parsed from file content; folder suffix n in the samples is not part of the ID.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PKG-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PKG-002",
+      "name": "Required and missing files",
+      "stage": "ingestion",
+      "priority": 6,
+      "enabled": true,
+      "primary_sources": [
+        "all files"
+      ],
+      "basis": "Brief 2,3",
+      "handler": "pkg_002",
+      "handler_contract": "PDF is required to extract; absent support files remain visible and their dependent cross-checks are NOT_RUN, not PASS.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PKG-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "required": [
+          "PDF"
+        ],
+        "verification_sources": [
+          "API",
+          "SCRAPPING",
+          "HTML"
+        ]
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PKG-003",
+      "name": "Ambiguous association",
+      "stage": "ingestion",
+      "priority": 7,
+      "enabled": true,
+      "primary_sources": [
+        "all files"
+      ],
+      "basis": "Brief 3",
+      "handler": "pkg_003",
+      "handler_contract": "Do not choose between different same-role files, versions or content IDs; allow explicit assignment with audit.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PKG-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PKG-004",
+      "name": "Original preservation",
+      "stage": "ingestion",
+      "priority": 8,
+      "enabled": true,
+      "primary_sources": [
+        "all files"
+      ],
+      "basis": "Brief 7,25",
+      "handler": "pkg_004",
+      "handler_contract": "Keep original bytes, SHA-256 and package-relative path immutable; edits are new derived revisions.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PKG-004"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PKG-005",
+      "name": "Archive and parser boundaries",
+      "stage": "ingestion",
+      "priority": 9,
+      "enabled": true,
+      "primary_sources": [
+        "all files"
+      ],
+      "basis": "Design safeguard",
+      "handler": "pkg_005",
+      "handler_contract": "Reject traversal, unsafe links and configured expansion limits; disable XML external entities and network DTD/schema resolution.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PKG-005"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PKG-006",
+      "name": "Sample isolation",
+      "stage": "ingestion",
+      "priority": 10,
+      "enabled": true,
+      "primary_sources": [
+        "all files"
+      ],
+      "basis": "Brief 30,38",
+      "handler": "pkg_006",
+      "handler_contract": "Expected output XMLs are development fixtures; never extract production fields from them, Redcarplus files or a prior final XML.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PKG-006"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-001",
+      "name": "Native layout extraction",
+      "stage": "extraction",
+      "priority": 11,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5",
+      "handler": "pdf_001",
+      "handler_contract": "Store page dimensions, rotation, text direction, blocks, lines, spans, glyph/word boxes, font/style, links and annotations.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-002",
+      "name": "Local OCR fallback",
+      "stage": "extraction",
+      "priority": 12,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 6",
+      "handler": "pdf_002",
+      "handler_contract": "OCR only regions with missing or unusable native text; record why, OCR boxes, recognition scores and model/version.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-003",
+      "name": "Coordinate contract",
+      "stage": "extraction",
+      "priority": 13,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Design contract",
+      "handler": "pdf_003",
+      "handler_contract": "Use zero-based internal page indexes plus one-based display page numbers, points and top-left origin; store crop/rotation transforms.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-003"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-004",
+      "name": "Layout reading order",
+      "stage": "extraction",
+      "priority": 14,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5; all 3 PDFs",
+      "handler": "pdf_004",
+      "handler_contract": "Segment columns and spanning blocks before sorting; never sort every word on a page only by y then x.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-005",
+      "name": "Boilerplate separation",
+      "stage": "extraction",
+      "priority": 15,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5; all 3 PDFs",
+      "handler": "pdf_005",
+      "handler_contract": "Classify running heads, page numbers, captions and rotated arXiv stamps separately while keeping their evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-006",
+      "name": "Normalized text is secondary",
+      "stage": "extraction",
+      "priority": 16,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5,6",
+      "handler": "pdf_006",
+      "handler_contract": "Produce searchable MD/text with token-to-source mappings; raw text, coordinates and original PDF remain available.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-006"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-007",
+      "name": "Glyph and line repair",
+      "stage": "extraction",
+      "priority": 17,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Observed accent and line-wrap cases",
+      "handler": "pdf_007",
+      "handler_contract": "Join soft wraps and reconstruct accent glyphs only with source layout evidence; preserve real hyphens, punctuation and raw text.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-007"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "PDF-008",
+      "name": "Mathematics and symbols",
+      "stage": "extraction",
+      "priority": 18,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5; 2408.09673 and 2408.09700",
+      "handler": "pdf_008",
+      "handler_contract": "Preserve symbol relationships in rich text; unsupported radicals/scripts or damaged symbols require review, not API substitution.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "PDF-008"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ID-001",
+      "name": "PDF identifier and version",
+      "stage": "identity",
+      "priority": 19,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,10",
+      "handler": "id_001",
+      "handler_contract": "Read ID and positive integer version from the first-page arXiv stamp, including rotation; a basename is not version evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ID-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "supported_id_pattern": "^\\d{4}\\.\\d{4,5}$",
+        "version_minimum": 1,
+        "expected_region_profile": "first_page_rotated_arxiv_stamp_v1"
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ID-002",
+      "name": "Scrapping verification",
+      "stage": "identity",
+      "priority": 20,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "SCRAPPING"
+      ],
+      "basis": "Brief 9; 3 source packages",
+      "handler": "id_002",
+      "handler_contract": "Compare PDF ID with /ARXIV/item/@id and PDF version with normalized /ARXIV/version/@number such as [v2].",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ID-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ID-003",
+      "name": "HTML verification",
+      "stage": "identity",
+      "priority": 21,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "HTML"
+      ],
+      "basis": "Brief 9; 3 source packages",
+      "handler": "id_003",
+      "handler_contract": "Compare citation_arxiv_id and the current version explicitly identified by the page; do not assume the largest history entry is the viewed version.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ID-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ID-004",
+      "name": "Unexpected stamp location",
+      "stage": "identity",
+      "priority": 22,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,10",
+      "handler": "id_004",
+      "handler_contract": "Search additional regions if the expected stamp is absent; retain any candidate and emit HOLD for unusual or missing location.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ID-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ID-005",
+      "name": "ID construction",
+      "stage": "identity",
+      "priority": 23,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 17; all 20 XMLs",
+      "handler": "id_005",
+      "handler_contract": "Store base ID and integer version separately; serialize their validated combination as ARXIV itemid text.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ID-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ID-006",
+      "name": "Conflicting version candidates",
+      "stage": "identity",
+      "priority": 24,
+      "enabled": true,
+      "primary_sources": [
+        "all support"
+      ],
+      "basis": "Brief 9,35",
+      "handler": "id_006",
+      "handler_contract": "Retain all candidates and reject silent latest-version replacement; missing version is not v1.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ID-006"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "TITLE-001",
+      "name": "Title verification",
+      "stage": "metadata",
+      "priority": 25,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "HTML"
+      ],
+      "basis": "Brief 9",
+      "handler": "title_001",
+      "handler_contract": "Compare normalized PDF title with HTML citation_title; ignore case and presentation markup, not different words or mathematical content.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "TITLE-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "unicode": "NFC",
+        "ignore_case": true,
+        "collapse_layout_whitespace": true,
+        "strip_presentation_markup": true,
+        "ignore_different_words": false
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "TITLE-002",
+      "name": "Conservative normalization",
+      "stage": "metadata",
+      "priority": 26,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "HTML"
+      ],
+      "basis": "Brief 9; 2408.09700",
+      "handler": "title_002",
+      "handler_contract": "Collapse layout whitespace and use approved typographic equivalences only; dash-to-double-hyphen equivalence is a named configurable rule.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "TITLE-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "typographic_equivalence_profile": "REQUIRES_PROFILE_DECISION_C02",
+        "em_dash_equals_double_hyphen_enabled": false
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "TITLE-003",
+      "name": "Title boundaries",
+      "stage": "metadata",
+      "priority": 27,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5,9",
+      "handler": "title_003",
+      "handler_contract": "Join multi-line title regions, excluding running heads, date, authors and journal banners; preserve rich text and evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "TITLE-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ABS-001",
+      "name": "PDF-only abstract",
+      "stage": "metadata",
+      "priority": 28,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "abs_001",
+      "handler_contract": "Extract abstract text only from PDF; API or HTML abstracts can be displayed but cannot populate or repair the output abstract.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ABS-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ABS-002",
+      "name": "Abstract boundaries",
+      "stage": "metadata",
+      "priority": 29,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9; 3 source packages",
+      "handler": "abs_002",
+      "handler_contract": "Use heading and layout evidence; support an unheaded abstract and cross-page continuation without including keywords or body sections.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ABS-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ABS-003",
+      "name": "Abstract fidelity",
+      "stage": "metadata",
+      "priority": 30,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 5,9; conflict C01",
+      "handler": "abs_003",
+      "handler_contract": "Check word boundaries, formulas and span coverage; a sample with glued words or raw API LaTeX is not an approved normalization rule.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ABS-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "KEY-001",
+      "name": "PDF keyword extraction",
+      "stage": "metadata",
+      "priority": 31,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "key_001",
+      "handler_contract": "Recognize configured keyword labels including Key words; missing keywords are absent, not invented from API categories.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "KEY-001"
+      },
+      "on_failure": {
+        "severity": "WARN",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "KEY-002",
+      "name": "Keyword boundaries",
+      "stage": "metadata",
+      "priority": 32,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9; 2408.09700 and 2408.09763",
+      "handler": "key_002",
+      "handler_contract": "Split on source-specific separators with layout evidence; retain punctuation and internal hyphens such as Four-roll-mill flow.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "KEY-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-001",
+      "name": "Global PDF order",
+      "stage": "authors",
+      "priority": 33,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,12,13",
+      "handler": "author_001",
+      "handler_contract": "Build one canonical author list in PDF reading order; count distinct canonical authors before creating affiliation groups.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-002",
+      "name": "API identity verification",
+      "stage": "authors",
+      "priority": 34,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "API"
+      ],
+      "basis": "Brief 9",
+      "handler": "author_002",
+      "handler_contract": "Compare canonical PDF identities with ordered API authors; allow consistent initial/full-name expansions but not arbitrary fuzzy substitutions.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-003",
+      "name": "Sequence verification",
+      "stage": "authors",
+      "priority": 35,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "API"
+      ],
+      "basis": "Brief 9,10",
+      "handler": "author_003",
+      "handler_contract": "Compare API author order to PDF global order; never reorder the PDF list to hide disagreement.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-004",
+      "name": "Given and family names",
+      "stage": "authors",
+      "priority": 36,
+      "enabled": true,
+      "primary_sources": [
+        "API",
+        "PDF"
+      ],
+      "basis": "Brief 12; all 3 API XMLs",
+      "handler": "author_004",
+      "handler_contract": "For matched identities use API forenames and keyname; keep original displayed PDF name and matching evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-005",
+      "name": "Initial generation",
+      "stage": "authors",
+      "priority": 37,
+      "enabled": true,
+      "primary_sources": [
+        "API",
+        "PDF"
+      ],
+      "basis": "Brief 12",
+      "handler": "author_005",
+      "handler_contract": "Create initials deterministically, preserving existing initials, hyphens and diacritics; do not expand unknown names.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-006",
+      "name": "Surname particles",
+      "stage": "authors",
+      "priority": 38,
+      "enabled": true,
+      "primary_sources": [
+        "API",
+        "PDF"
+      ],
+      "basis": "Brief 12",
+      "handler": "author_006",
+      "handler_contract": "Preserve API surname components and multi-family surnames; configured particles are not a license to move words without evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-006"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-007",
+      "name": "Unspecified name policy",
+      "stage": "authors",
+      "priority": 39,
+      "enabled": true,
+      "primary_sources": [
+        "API",
+        "PDF"
+      ],
+      "basis": "Brief 12; gap G03",
+      "handler": "author_007",
+      "handler_contract": "If unstructured/non-Latin parsing needs a missing project rule, retain the displayed name for review rather than assume a universal last-token surname.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-007"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AUTHOR-008",
+      "name": "One identity, repeated occurrences",
+      "stage": "authors",
+      "priority": 40,
+      "enabled": true,
+      "primary_sources": [
+        "canonical metadata"
+      ],
+      "basis": "Brief 13; all 20 XMLs",
+      "handler": "author_008",
+      "handler_contract": "Reuse global_seq and the same canonical name/ORCID/email on all author-group occurrences; repeated seq across groups is legitimate.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AUTHOR-008"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-001",
+      "name": "PDF-only affiliations",
+      "stage": "affiliations",
+      "priority": 41,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,11",
+      "handler": "aff_001",
+      "handler_contract": "Extract normal affiliations only from PDF; API or HTML organizations cannot fill missing fields.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-002",
+      "name": "Marker mapping",
+      "stage": "affiliations",
+      "priority": 42,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,13",
+      "handler": "aff_002",
+      "handler_contract": "Create author-affiliation edges from author-attached markers and matching affiliation markers; store both endpoint evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-003",
+      "name": "Missing marker ambiguity",
+      "stage": "affiliations",
+      "priority": 43,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 10",
+      "handler": "aff_003",
+      "handler_contract": "Multiple possible affiliations with no reliable relationship require review; a single clearly shared affiliation may be linked by documented layout evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-004",
+      "name": "Original versus present address",
+      "stage": "affiliations",
+      "priority": 44,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "aff_004",
+      "handler_contract": "Prefer original/main affiliations; use current, former or work-completed-at information only when the author has no original affiliation.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-005",
+      "name": "More complete original evidence",
+      "stage": "affiliations",
+      "priority": 45,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "aff_005",
+      "handler_contract": "Prefer demonstrably more complete versions of the same original affiliation; incompatible organizations/addresses are a conflict, not a merge.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-006",
+      "name": "No correspondence backfill",
+      "stage": "affiliations",
+      "priority": 46,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "aff_006",
+      "handler_contract": "Do not manufacture a normal affiliation by copying extra address details from correspondence-only data.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-006"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-007",
+      "name": "Organization decomposition",
+      "stage": "affiliations",
+      "priority": 47,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 11",
+      "handler": "aff_007",
+      "handler_contract": "Store organizations as an ordered array and address components separately; retain exact source wording in source_text.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-007"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-008",
+      "name": "No geographic invention",
+      "stage": "affiliations",
+      "priority": 48,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 11,35",
+      "handler": "aff_008",
+      "handler_contract": "Do not infer city or country from institution reputation or web lookup; missing geographic parts remain missing.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-008"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-009",
+      "name": "State dictionary",
+      "stage": "affiliations",
+      "priority": 49,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 11; 2408.09700",
+      "handler": "aff_009",
+      "handler_contract": "Use state for USA, Canada and Australia under country-specific mappings; NSW and ACT are valid observed values and must not be truncated to two letters.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-009"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "state_countries": [
+          "USA",
+          "CAN",
+          "AUS"
+        ],
+        "fixed_two_character_limit": false
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-010",
+      "name": "Other administrative divisions",
+      "stage": "affiliations",
+      "priority": 50,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 11; 2408.09763",
+      "handler": "aff_010",
+      "handler_contract": "Use address-part for other source-supplied subdivisions unless an explicit rule says otherwise; Kerala remains address-part.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-010"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-011",
+      "name": "Country code mapping",
+      "stage": "affiliations",
+      "priority": 51,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "dictionary"
+      ],
+      "basis": "Brief 11",
+      "handler": "aff_011",
+      "handler_contract": "Use approved alpha-3 dictionary entries for explicitly supplied country/territory wording; preserve original wording in source_text.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-011"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-012",
+      "name": "UK constituent wording",
+      "stage": "affiliations",
+      "priority": 52,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "dictionary"
+      ],
+      "basis": "Brief 11",
+      "handler": "aff_012",
+      "handler_contract": "Map explicitly supplied Scotland, Wales and Northern Ireland to GBR while preserving the wording; do not rewrite source text.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-012"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "Scotland": "GBR",
+        "Wales": "GBR",
+        "Northern Ireland": "GBR"
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-013",
+      "name": "Territory mappings",
+      "stage": "affiliations",
+      "priority": 53,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "dictionary"
+      ],
+      "basis": "Brief 11",
+      "handler": "aff_013",
+      "handler_contract": "Map Hong Kong to HKG, Macau to MAC, and Taiwan or Republic of China to TWN under the project dictionary.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-013"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "Hong Kong": "HKG",
+        "Macau": "MAC",
+        "Taiwan": "TWN",
+        "Republic of China": "TWN"
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-014",
+      "name": "Unspecified country cases",
+      "stage": "affiliations",
+      "priority": 54,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 11",
+      "handler": "aff_014",
+      "handler_contract": "Crimea or Palestine/Israel-related addresses without a stated country must not acquire an invented country.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-014"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-015",
+      "name": "Department composition",
+      "stage": "affiliations",
+      "priority": 55,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 14",
+      "handler": "aff_015",
+      "handler_contract": "Combine shared institution and author-specific department fragments only through explicit PDF relationships; retain component-level provenance.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-015"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-016",
+      "name": "Group serialization",
+      "stage": "affiliations",
+      "priority": 56,
+      "enabled": true,
+      "primary_sources": [
+        "canonical graph"
+      ],
+      "basis": "Brief 13; 3 matching XMLs",
+      "handler": "aff_016",
+      "handler_contract": "Order groups by source affiliation order and authors within each group by global_seq; repeat authors for multiple affiliations without renumbering.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-016"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-017",
+      "name": "Unusual affiliation location",
+      "stage": "affiliations",
+      "priority": 57,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 10",
+      "handler": "aff_017",
+      "handler_contract": "Keep candidates found outside normal front matter/linked notes, show their location, and request review without blocking XML preview.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-017"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "AFF-018",
+      "name": "Affiliation-free authors",
+      "stage": "affiliations",
+      "priority": 58,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "2408.14658 output-only; design default",
+      "handler": "aff_018",
+      "handler_contract": "Retain authors with no known affiliation in an affiliation-free group; distinguish truly absent data from unresolved edges and never omit the author.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "AFF-018"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EMAIL-001",
+      "name": "PDF-only email",
+      "stage": "contacts",
+      "priority": 59,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "email_001",
+      "handler_contract": "Store at most one selected email per canonical author; preserve all candidates internally and flag unresolved multiple choices.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EMAIL-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "max_selected_emails_per_author": 1
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EMAIL-002",
+      "name": "Shared email notation",
+      "stage": "contacts",
+      "priority": 60,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "email_002",
+      "handler_contract": "Expand grouped local parts only when the complete common domain and author relationship are explicit on the same PDF.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EMAIL-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EMAIL-003",
+      "name": "Email completion limits",
+      "stage": "contacts",
+      "priority": 61,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,35",
+      "handler": "email_003",
+      "handler_contract": "Fill incomplete email components only from unambiguous PDF evidence; no guessing from names or external lookup.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EMAIL-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ORCID-001",
+      "name": "PDF ORCID evidence",
+      "stage": "contacts",
+      "priority": 62,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "orcid_001",
+      "handler_contract": "Accept visible number or PDF hyperlink attached to the relevant author/logo; a logo with no recoverable link is not an identifier.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ORCID-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "ORCID-002",
+      "name": "ORCID format",
+      "stage": "contacts",
+      "priority": 63,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 23; observed XML attribute",
+      "handler": "orcid_002",
+      "handler_contract": "Normalize the identifier only; validate configured syntax/check-digit rules and identity association; store at author/@orcid, not an invented ce:orcid element.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "ORCID-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "CORR-001",
+      "name": "Single-author decision",
+      "stage": "contacts",
+      "priority": 64,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 15",
+      "handler": "corr_001",
+      "handler_contract": "For one canonical author, email or affiliation is sufficient for correspondence; explicit correspondence is sufficient; neither means no unless explicit text says yes.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "CORR-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "CORR-002",
+      "name": "Multiple-author evidence",
+      "stage": "contacts",
+      "priority": 65,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 15; 2408.09700 and 2408.09763",
+      "handler": "corr_002",
+      "handler_contract": "Require explicit correspondence text or an author-attached correspondence marker with a resolved meaning.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "CORR-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "CORR-003",
+      "name": "Non-correspondence marker",
+      "stage": "contacts",
+      "priority": 66,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 15",
+      "handler": "corr_003",
+      "handler_contract": "Equal contribution, present address and other identified non-correspondence markers do not set correspondence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "CORR-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "CORR-004",
+      "name": "Email-only or affiliation-only symbol",
+      "stage": "contacts",
+      "priority": 67,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,15",
+      "handler": "corr_004",
+      "handler_contract": "An asterisk on email/affiliation without a matching author indicator does not set correspondence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "CORR-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "CORR-005",
+      "name": "Unexplained symbol",
+      "stage": "contacts",
+      "priority": 68,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 15",
+      "handler": "corr_005",
+      "handler_contract": "An unresolved star/envelope/dagger is evidence to review, not automatic correspondence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "CORR-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "CORR-006",
+      "name": "Correspondence serialization",
+      "stage": "contacts",
+      "priority": 69,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "canonical metadata"
+      ],
+      "basis": "Brief 17; 12 observed correspondence elements",
+      "handler": "corr_006",
+      "handler_contract": "Create a separate head/correspondence per selected person, with person, optional evidenced affiliation and selected ce:e-address in the observed order.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "CORR-006"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-001",
+      "name": "Article applicability",
+      "stage": "references",
+      "priority": 70,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "run config"
+      ],
+      "basis": "Brief 9",
+      "handler": "ref_001",
+      "handler_contract": "Apply the 1970-to-as-of-year scope to the article, not to each cited work; retain older citations such as the 1967 reference in 2408.09700.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "min_article_year": 1970,
+        "max_article_year_source": "run_context.as_of_date.year",
+        "filter_reference_publication_years": false
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-002",
+      "name": "Section discovery",
+      "stage": "references",
+      "priority": 71,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,16",
+      "handler": "ref_002",
+      "handler_contract": "Discover all main/supplementary bibliography regions using headings plus layout and bibliographic entry patterns.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-003",
+      "name": "Heading-free bibliography",
+      "stage": "references",
+      "priority": 72,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 10; 2408.09763 pages 9-10",
+      "handler": "ref_003",
+      "handler_contract": "A missing heading must not yield zero references; retain the detected list and flag missing/unusual section identification.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-004",
+      "name": "Column/page continuation",
+      "stage": "references",
+      "priority": 73,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 16; all 3 PDFs",
+      "handler": "ref_004",
+      "handler_contract": "Continue an entry across column or page breaks until the next confirmed boundary; never truncate at a page/column limit.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-005",
+      "name": "Numbered boundaries",
+      "stage": "references",
+      "priority": 74,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 16",
+      "handler": "ref_005",
+      "handler_contract": "Detect source labels only at entry starts in a confirmed reference region; body citations, years and figure labels are not entry starts.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-006",
+      "name": "Unnumbered boundaries",
+      "stage": "references",
+      "priority": 75,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "2408.09700 page 10",
+      "handler": "ref_006",
+      "handler_contract": "Use hanging indentation, recurring author/year starts and block structure; URLs, DOI lines and indented continuations stay with their entry.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-006"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-007",
+      "name": "Source-label removal",
+      "stage": "references",
+      "priority": 76,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,16",
+      "handler": "ref_007",
+      "handler_contract": "Strip only the detected leading source label from exported reference text; retain original_label and its bounding box internally.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-007"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-008",
+      "name": "No citation enrichment",
+      "stage": "references",
+      "priority": 77,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,35",
+      "handler": "ref_008",
+      "handler_contract": "Capture incomplete references as found; do not fetch DOI metadata, search the web or use support abstracts to complete them.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-008"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-009",
+      "name": "Shorthand-only entries",
+      "stage": "references",
+      "priority": 78,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "ref_009",
+      "handler_contract": "An entry consisting only of ibid, supra, op. cit. or loc. cit. is an explicit excluded candidate with a reason, not a fabricated work.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-009"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "case_insensitive": true,
+        "whole_entry_only": true,
+        "terms": [
+          "ibid",
+          "supra",
+          "op. cit.",
+          "loc. cit."
+        ]
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-010",
+      "name": "Non-Roman-only entries",
+      "stage": "references",
+      "priority": 79,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "ref_010",
+      "handler_contract": "Exclude entirely non-Roman references with a logged reason; mixed-script or unclear cases require review, not automatic deletion.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-010"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-011",
+      "name": "Main versus footnote references",
+      "stage": "references",
+      "priority": 80,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "ref_011",
+      "handler_contract": "When normal references exist capture those, excluding footnote citations; if only bibliographic footnotes exist capture them with HOLD.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-011"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-012",
+      "name": "Inline citations",
+      "stage": "references",
+      "priority": 81,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9",
+      "handler": "ref_012",
+      "handler_contract": "Do not turn body-only inline citations into bibliography entries; retain exclusion classification for coverage review.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-012"
+      },
+      "on_failure": {
+        "severity": "WARN",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-013",
+      "name": "Multiple works in one entry",
+      "stage": "references",
+      "priority": 82,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,16",
+      "handler": "ref_013",
+      "handler_contract": "Split only on a supported multi-work boundary with source spans; semicolons alone are insufficient evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-013"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-014",
+      "name": "Supplement and multiple regions",
+      "stage": "references",
+      "priority": 83,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 9,10",
+      "handler": "ref_014",
+      "handler_contract": "Inventory main and supplemental reference regions in document order; multiple distinct locations trigger review and explicit inclusion decisions.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-014"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-015",
+      "name": "Underscore placeholders",
+      "stage": "references",
+      "priority": 84,
+      "enabled": true,
+      "primary_sources": [
+        "PDF"
+      ],
+      "basis": "Brief 10",
+      "handler": "ref_015",
+      "handler_contract": "Flag blank/underscore author placeholders; keep source text and do not copy an earlier author name into the reference.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-015"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-016",
+      "name": "Output ordering",
+      "stage": "references",
+      "priority": 85,
+      "enabled": true,
+      "primary_sources": [
+        "canonical references"
+      ],
+      "basis": "Brief 9,16",
+      "handler": "ref_016",
+      "handler_contract": "Use source region order, source entry order and split-part order, then assign contiguous output seq starting at 1.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-016"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-017",
+      "name": "DOM-derived refcount",
+      "stage": "references",
+      "priority": 86,
+      "enabled": true,
+      "primary_sources": [
+        "generated XML"
+      ],
+      "basis": "Brief 16,23",
+      "handler": "ref_017",
+      "handler_contract": "Set bibliography/@refcount from the actual serialized reference elements; validate again after any direct XML edit.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-017"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-018",
+      "name": "Independent source coverage",
+      "stage": "references",
+      "priority": 87,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "canonical references"
+      ],
+      "basis": "Brief 16",
+      "handler": "ref_018",
+      "handler_contract": "Independently inventory labels/start lines and region coverage; reconcile accepted, excluded and pending candidates instead of trusting output count alone.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-018"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-019",
+      "name": "Duplicate handling",
+      "stage": "references",
+      "priority": 88,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "canonical references"
+      ],
+      "basis": "Brief 23,35",
+      "handler": "ref_019",
+      "handler_contract": "Flag identical/similar candidates with evidence; never silently deduplicate separate source entries.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-019"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-020",
+      "name": "No extraction caps",
+      "stage": "references",
+      "priority": 89,
+      "enabled": true,
+      "primary_sources": [
+        "runtime"
+      ],
+      "basis": "Brief 16,35",
+      "handler": "ref_020",
+      "handler_contract": "Do not impose hidden limits on pages, references, text length or first-N extraction; configured resource limits stop visibly and preserve partial work.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-020"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-021",
+      "name": "Coverage accounting",
+      "stage": "references",
+      "priority": 90,
+      "enabled": true,
+      "primary_sources": [
+        "candidate ledger"
+      ],
+      "basis": "Brief 16; design contract",
+      "handler": "ref_021",
+      "handler_contract": "Require C=A+X+U and R=sum of emitted parts for accepted candidates; extra split parts are recorded and excluded/pending counts are visible.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-021"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "candidate_invariant": "C = A + X + U",
+        "output_invariant": "R = sum(parts for accepted candidates)",
+        "count_equality_alone_proves_coverage": false
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "REF-022",
+      "name": "No fixed target counts",
+      "stage": "references",
+      "priority": 91,
+      "enabled": true,
+      "primary_sources": [
+        "runtime"
+      ],
+      "basis": "Brief 30,35",
+      "handler": "ref_022",
+      "handler_contract": "58, 89, 45 and 82 are regression expectations, never production extraction constants or values copied from expected XML.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "REF-022"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-001",
+      "name": "Namespace profile",
+      "stage": "xml",
+      "priority": 92,
+      "enabled": true,
+      "primary_sources": [
+        "template"
+      ],
+      "basis": "All 20 XMLs",
+      "handler": "xml_001",
+      "handler_contract": "Use default ANI http://www.elsevier.com/xml/ani/ani and ce http://www.elsevier.com/xml/ani/common; XML lang uses the XML namespace.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-001"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "namespaces": {
+          "ani": "http://www.elsevier.com/xml/ani/ani",
+          "ce": "http://www.elsevier.com/xml/ani/common",
+          "xml": "http://www.w3.org/XML/1998/namespace"
+        }
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-002",
+      "name": "DOM-only serialization",
+      "stage": "xml",
+      "priority": 93,
+      "enabled": true,
+      "primary_sources": [
+        "canonical metadata"
+      ],
+      "basis": "Brief 17",
+      "handler": "xml_002",
+      "handler_contract": "Build qualified elements/attributes using an XML builder, escape text once, serialize UTF-8 and parse the result; no raw concatenation or injected fragments.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-002"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-003",
+      "name": "Exact observed hierarchy",
+      "stage": "xml",
+      "priority": 94,
+      "enabled": true,
+      "primary_sources": [
+        "template"
+      ],
+      "basis": "All 20 XMLs",
+      "handler": "xml_003",
+      "handler_contract": "Use units/unit/unit-content/bibrecord with sibling item-info, head, tail, and bibliography under tail; preserve observed child order.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-003"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-004",
+      "name": "Static versus dynamic fields",
+      "stage": "xml",
+      "priority": 95,
+      "enabled": true,
+      "primary_sources": [
+        "template",
+        "metadata"
+      ],
+      "basis": "Brief 18; all 20 XMLs",
+      "handler": "xml_004",
+      "handler_contract": "Pin constants in a profile, derive article data from current evidence, and obtain timestamp from an explicit frozen run context.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-004"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-005",
+      "name": "Placeholder delivery values",
+      "stage": "xml",
+      "priority": 96,
+      "enabled": true,
+      "primary_sources": [
+        "delivery profile"
+      ],
+      "basis": "All 20 XMLs; gap G01",
+      "handler": "xml_005",
+      "handler_contract": "unknown, none and ??? are sample literals, not verified client delivery values; require profile selection or recorded acceptance, while allowing draft/forced export.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-005"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-006",
+      "name": "Observed reference shape",
+      "stage": "xml",
+      "priority": 97,
+      "enabled": true,
+      "primary_sources": [
+        "template"
+      ],
+      "basis": "All 974 references",
+      "handler": "xml_006",
+      "handler_contract": "Default sample profile uses ref-info empty, ref-fulltext and ce:source-text; do not invent structured reference children without an approved extension.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-006"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-007",
+      "name": "Optional and missing values",
+      "stage": "xml",
+      "priority": 98,
+      "enabled": true,
+      "primary_sources": [
+        "canonical metadata"
+      ],
+      "basis": "Brief 35; observed omissions",
+      "handler": "xml_007",
+      "handler_contract": "Omit unsupported optional values rather than invent them; missing required values produce a partial full-document draft plus explicit issues, never fabricated text.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-007"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-008",
+      "name": "Mixed content",
+      "stage": "xml",
+      "priority": 99,
+      "enabled": true,
+      "primary_sources": [
+        "PDF",
+        "template"
+      ],
+      "basis": "Observed sup/inf paths; gap G04",
+      "handler": "xml_008",
+      "handler_contract": "Treat inline text, tails and script spans as rich content; sup/inf are in the inherited ANI namespace; do not turn radicals into superscripts.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-008"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-009",
+      "name": "No unapproved output metadata",
+      "stage": "xml",
+      "priority": 100,
+      "enabled": true,
+      "primary_sources": [
+        "template"
+      ],
+      "basis": "Brief 17,25; observed profile",
+      "handler": "xml_009",
+      "handler_contract": "Store audit, confidence, HOLD reasons and evidence outside client XML; do not inject telemetry, internal IDs, EGI/IPUI or DOI elements absent from the selected profile.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-009"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-010",
+      "name": "Schema status",
+      "stage": "xml",
+      "priority": 101,
+      "enabled": true,
+      "primary_sources": [
+        "validation config"
+      ],
+      "basis": "Brief 23; gap G02",
+      "handler": "xml_010",
+      "handler_contract": "Without a supplied client XSD report XSD NOT_RUN, not schema-valid; local sample-profile checks are a separately named validation layer.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-010"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "xsd_supplied": false,
+        "xsd_status": "NOT_RUN"
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "XML-011",
+      "name": "Technical failure versus HOLD",
+      "stage": "xml",
+      "priority": 102,
+      "enabled": true,
+      "primary_sources": [
+        "XML editor"
+      ],
+      "basis": "Brief 39-46; design contract",
+      "handler": "xml_011",
+      "handler_contract": "Malformed XML remains editable/saveable as a draft; a HOLD override does not turn a parser/schema error into a validation pass.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "XML-011"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-001",
+      "name": "Full preview on HOLD",
+      "stage": "review",
+      "priority": 103,
+      "enabled": true,
+      "primary_sources": [
+        "metadata"
+      ],
+      "basis": "Brief 39,42,46",
+      "handler": "edit_001",
+      "handler_contract": "Generate the full document preview from all available data after extraction even when HOLDs remain; show absent/affected fields beside the XML.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-001"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-002",
+      "name": "Metadata editing",
+      "stage": "review",
+      "priority": 104,
+      "enabled": true,
+      "primary_sources": [
+        "operator"
+      ],
+      "basis": "Brief 21,41",
+      "handler": "edit_002",
+      "handler_contract": "Allow every specified field, author-affiliation edge and reference to be edited; retain extracted and accepted values as separate revisions.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-002"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-003",
+      "name": "Full XML editing",
+      "stage": "review",
+      "priority": 105,
+      "enabled": true,
+      "primary_sources": [
+        "operator"
+      ],
+      "basis": "Brief 40,41",
+      "handler": "edit_003",
+      "handler_contract": "Offer the entire XML document with undo, search/replace, validation, line/column navigation, save and download; do not limit users to forms.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-003"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-004",
+      "name": "Direct edit protection",
+      "stage": "review",
+      "priority": 106,
+      "enabled": true,
+      "primary_sources": [
+        "operator"
+      ],
+      "basis": "Brief 22,41",
+      "handler": "edit_004",
+      "handler_contract": "Mark direct XML edits and retain their revision; later metadata changes make XML stale, never silently replace manual edits.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-004"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-005",
+      "name": "Regenerate or keep manual XML",
+      "stage": "review",
+      "priority": 107,
+      "enabled": true,
+      "primary_sources": [
+        "operator"
+      ],
+      "basis": "Brief 22,41",
+      "handler": "edit_005",
+      "handler_contract": "Provide explicit regenerate-with-confirmation and keep-manual actions; snapshot the current XML before replacement.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-005"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-006",
+      "name": "Override controls",
+      "stage": "review",
+      "priority": 108,
+      "enabled": true,
+      "primary_sources": [
+        "operator"
+      ],
+      "basis": "Brief 39,43",
+      "handler": "edit_006",
+      "handler_contract": "Allow edit, evidence view, accept extracted value, override and keep HOLD; record rule, issue, user, old/new values, timestamp and optional reason.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-006"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-007",
+      "name": "Selective reevaluation",
+      "stage": "review",
+      "priority": 109,
+      "enabled": true,
+      "primary_sources": [
+        "dependency graph"
+      ],
+      "basis": "Brief 42",
+      "handler": "edit_007",
+      "handler_contract": "Re-run affected rules after edits; an override applies to a specific evidence/value/rule revision and becomes stale when those inputs change.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-007"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EDIT-008",
+      "name": "Traceability after raw edits",
+      "stage": "review",
+      "priority": 110,
+      "enabled": true,
+      "primary_sources": [
+        "manual XML"
+      ],
+      "basis": "Brief 44; design contract",
+      "handler": "edit_008",
+      "handler_contract": "Map recognizable XML nodes back to canonical fields; unmatched manual nodes are explicitly unmapped, not falsely linked to PDF evidence.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EDIT-008"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "VAL-001",
+      "name": "Validation layers",
+      "stage": "validation",
+      "priority": 111,
+      "enabled": true,
+      "primary_sources": [
+        "all"
+      ],
+      "basis": "Brief 23",
+      "handler": "val_001",
+      "handler_contract": "Report parser, sample-profile, business, source-verification and optional XSD results separately; missing checks are NOT_RUN.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "VAL-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "VAL-002",
+      "name": "Unique author checks",
+      "stage": "validation",
+      "priority": 112,
+      "enabled": true,
+      "primary_sources": [
+        "canonical metadata",
+        "XML"
+      ],
+      "basis": "Brief 13,23",
+      "handler": "val_002",
+      "handler_contract": "Validate distinct global author identities, contiguous global sequence and correct group edges; do not compare API count with raw XML author occurrence count.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "VAL-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "VAL-003",
+      "name": "Final artifact validation",
+      "stage": "validation",
+      "priority": 113,
+      "enabled": true,
+      "primary_sources": [
+        "exact export bytes"
+      ],
+      "basis": "Brief 23,43",
+      "handler": "val_003",
+      "handler_contract": "Validate the selected current XML revision immediately before export; do not reuse results from a previous generated revision.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "VAL-003"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "VAL-004",
+      "name": "Error navigation",
+      "stage": "validation",
+      "priority": 114,
+      "enabled": true,
+      "primary_sources": [
+        "XML editor"
+      ],
+      "basis": "Brief 24,40",
+      "handler": "val_004",
+      "handler_contract": "Use parser line/column against the exact buffer revision; formatting invalidates old coordinates; map to metadata/evidence when available.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "VAL-004"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EXP-001",
+      "name": "Normal export",
+      "stage": "export",
+      "priority": 115,
+      "enabled": true,
+      "primary_sources": [
+        "operator",
+        "validation"
+      ],
+      "basis": "Brief 23,43",
+      "handler": "exp_001",
+      "handler_contract": "Normal export requires passed technical gates and resolved/validly overridden review issues under the chosen delivery profile.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EXP-001"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EXP-002",
+      "name": "Export with HOLDs",
+      "stage": "export",
+      "priority": 116,
+      "enabled": true,
+      "primary_sources": [
+        "authorized operator"
+      ],
+      "basis": "Brief 39,43,46",
+      "handler": "exp_002",
+      "handler_contract": "Permit deliberate export with unresolved HOLDs, show the list, record acknowledgement and export status; never relabel it VERIFIED.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EXP-002"
+      },
+      "on_failure": {
+        "severity": "HOLD",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "default_available_to_authorized_operator": true,
+        "acknowledgement_required": true,
+        "override_reason_required": false
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EXP-003",
+      "name": "Technical-error draft download",
+      "stage": "export",
+      "priority": 117,
+      "enabled": true,
+      "primary_sources": [
+        "operator"
+      ],
+      "basis": "Brief 40,46; design contract",
+      "handler": "exp_003",
+      "handler_contract": "Allow saving/downloading an invalid edit buffer as an explicitly invalid draft; do not present it as a validated delivery XML.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EXP-003"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "EXP-004",
+      "name": "Revision and audit export",
+      "stage": "export",
+      "priority": 118,
+      "enabled": true,
+      "primary_sources": [
+        "exact export bytes"
+      ],
+      "basis": "Brief 25,27",
+      "handler": "exp_004",
+      "handler_contract": "Record selected XML hash, revision, input hashes, profile/rule versions, validation snapshot and unresolved/overridden issue IDs in sidecar audit JSON/CSV.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "EXP-004"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "BATCH-001",
+      "name": "Independent jobs",
+      "stage": "batch",
+      "priority": 119,
+      "enabled": true,
+      "primary_sources": [
+        "queue"
+      ],
+      "basis": "Brief 26",
+      "handler": "batch_001",
+      "handler_contract": "Support 1, 5 and 25 packages; a failed article does not stop other articles, and completed work survives restart.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "BATCH-001"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {
+        "supported_batch_sizes": [
+          1,
+          5,
+          25
+        ],
+        "concurrency": "bounded_configurable"
+      },
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "BATCH-002",
+      "name": "Multidimensional status",
+      "stage": "batch",
+      "priority": 120,
+      "enabled": true,
+      "primary_sources": [
+        "job state"
+      ],
+      "basis": "Brief 45",
+      "handler": "batch_002",
+      "handler_contract": "Keep processing, review, XML, validation and export states separate; XML_GENERATED and ON_HOLD may coexist.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "BATCH-002"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "BATCH-003",
+      "name": "Rule update governance",
+      "stage": "batch",
+      "priority": 121,
+      "enabled": true,
+      "primary_sources": [
+        "administrator"
+      ],
+      "basis": "Brief 19,31",
+      "handler": "batch_003",
+      "handler_contract": "Version rule/dictionary changes, validate their schema, run regression fixtures and record activation; manual correction never trains an unpredictable model.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "BATCH-003"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "TEST-001",
+      "name": "Quarantined conflicts",
+      "stage": "testing",
+      "priority": 122,
+      "enabled": true,
+      "primary_sources": [
+        "fixtures"
+      ],
+      "basis": "Brief 30,38",
+      "handler": "test_001",
+      "handler_contract": "Do not bless contradictory sample fields as golden truth; maintain observed and approved expectations separately with issue IDs.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "TEST-001"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    },
+    {
+      "rule_id": "TEST-002",
+      "name": "No unsupported success claim",
+      "stage": "testing",
+      "priority": 123,
+      "enabled": true,
+      "primary_sources": [
+        "test reports"
+      ],
+      "basis": "Brief 30; audit scope",
+      "handler": "test_002",
+      "handler_contract": "Distinguish specification checks, XML parse checks, PDF inspections and actual application tests; do not infer full client acceptance or accuracy from sample counts.",
+      "conditions": {
+        "type": "handler_defined",
+        "contract": "TEST-002"
+      },
+      "on_failure": {
+        "severity": "ERROR",
+        "preserve_evidence": true,
+        "allow_xml_preview": true,
+        "allow_human_review": true
+      },
+      "parameters": {},
+      "status": "SPECIFIED_NOT_IMPLEMENTED"
+    }
+  ]
+}

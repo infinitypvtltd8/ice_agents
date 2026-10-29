@@ -1,0 +1,12 @@
+Runtime dependencies (no AI/LLM SDK):
+PyMuPDF 1.26.6 - https://pymupdf.readthedocs.io/ - AGPL-3.0/commercial
+lxml 6.0.2 - https://lxml.de/ - BSD license and underlying libxml2/libxslt licenses
+Python - https://www.python.org/ - PSF License
+Optional Tesseract OCR - https://github.com/tesseract-ocr/tesseract - Apache-2.0
+
+Exact third-party licenses ship with their installed distributions. This app
+does not remove or replace those license terms. The Windows portable ZIP bundles the official Python 3.12.10 embedded runtime
+and Windows wheels for the versions above. License files are retained in
+runtime and runtime/Lib/site-packages. requirements.txt pins the source setup
+versions. The runtime download originated from python.org; Python wheels were
+downloaded with pip from the configured package index.

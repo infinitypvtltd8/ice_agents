@@ -1,0 +1,22 @@
+# Normalize text files; checkout uses the platform's native line endings
+* text=auto
+
+# Windows batch files must have CRLF endings or cmd.exe can mis-handle labels/goto
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Shell scripts must keep LF endings to run on macOS/Linux
+*.sh text eol=lf
+
+# Bundled portable Python runtime: keep every file byte-for-byte as shipped
+ICE_Local/runtime/** -text
+
+# Binary files
+*.pyd binary
+*.dll binary
+*.exe binary
+*.zip binary
+*.pdf binary
+*.png binary
+*.gif binary
+*.ico binary

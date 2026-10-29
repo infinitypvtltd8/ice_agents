@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ICE Local · Citation workspace</title><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/xml-preview.css"><link rel="icon" href="/favicon.svg" type="image/svg+xml"></head>
+<body>
+<aside class="sidebar" id="import-sidebar">
+  <div class="brand"><img class="brand-logo" src="/logo.gif" alt="Infinity Group logo"><div><strong>ICE <em>LOCAL</em></strong><small>INFINITY CITATION ENGINE</small></div><button id="toggle-imports" title="Slide import panel" aria-label="Slide import panel">‹</button></div>
+  <div class="import-actions"><button class="primary full" id="zips">＋ Import multiple ZIPs</button>
+  <button class="full" id="upload">Import documents</button>
+  <div class="side-actions"><button id="folder">Import folder</button><button id="demo">Try sample files</button></div>
+  <button class="full" id="import-report" hidden>Last import report</button></div>
+  <div class="sidebar-bulk"><a class="side-page-link" id="reports-open" href="/reports.html">Reports & Analytics ↗</a><label class="check"><input type="checkbox" id="select-all"> Select all files</label><div class="side-actions"><button id="download-selected">Download selected</button><button id="export-all">Export all</button></div><div class="side-actions"><button id="clear-selected">Clear selected</button><button id="export-folders">Export to folder</button></div><div class="side-actions"><button id="clear-all">Clear all</button></div></div>
+  <div class="sidebar-label">ARTICLES <span id="job-count">0</span></div>
+  <div id="jobs" class="jobs"></div>
+  <div class="sidebar-footer"><button id="rules">Matching rules</button><button id="settings">Settings</button><div class="account"><span class="account-avatar" aria-hidden="true">L</span><span class="account-text"><strong>Local workspace</strong><small>This computer</small></span></div><div class="local-note">Local processing · No LLM calls</div></div>
+</aside>
+<main>
+  <header><div><span class="eyebrow">DOCUMENT WORKSPACE</span><h1 id="heading">Your citation workspace</h1></div><div id="header-actions"></div></header>
+  <section id="dashboard-top" class="dashboard-top"><div class="dashboard-heading"><strong>Dashboard</strong><button id="dashboard-toggle" aria-expanded="true" aria-controls="stats">▴ Collapse</button></div><section id="stats" class="stats"></section></section><section id="file-summary" class="file-summary"></section>
+  <section id="empty" class="empty"><div class="empty-icon">↥</div><h2>Bring your article package</h2><p>Import a PDF with its HTML, API XML and Scrapping XML.<br>ZIPs and folders are supported. Every result stays editable.</p><button class="primary" id="empty-upload">Choose documents</button><p class="muted small">Or drag files anywhere into this workspace.</p><div class="pipeline"><span>01 <b>Extract</b></span><span>02 <b>Review sources</b></span><span>03 <b>Edit & export XML</b></span></div></section>
+  <section id="queue-landing" class="queue-landing" hidden><div class="queue-intro"><h2>All files · General queue</h2><p>Every article stays in General while matching checks and XML generation highlight items that need review.</p></div><div class="queue-columns"><section class="queue-column"><h3>General queue <span id="general-count">0</span></h3><p>Matching checks and review status remain visible on each article.</p><div id="general-files"></div></section></div></section>
+  <section id="work" hidden>
+    <div id="article-bar" class="article-bar"></div>
+    <div class="workspace" id="workspace">
+      <aside class="support-rail" id="support-rail"><div class="rail-heading"><strong>Support documents</strong><div><button id="compare-open" title="Compare sources">⇄</button><button id="fullscreen-support" title="Full screen support documents">⛶</button><button id="toggle-support" title="Slide support documents" aria-label="Slide support documents">‹</button></div></div><div id="support-widgets"></div></aside>
+      <div class="pane-grip" id="support-grip" title="Drag to resize support documents"></div>
+      <section class="source-panel"><div class="panel-heading"><strong>Selected document</strong><select id="source-select" aria-label="Source document"></select><button id="fullscreen-source" title="Show selected document full screen" aria-label="Show selected document full screen">⛶</button></div><div id="viewer-toolbar" class="viewer-toolbar"></div><div id="viewer" class="viewer"></div></section>
+      <div class="pane-grip" id="review-grip" title="Drag to resize metadata panel"></div>
+      <section class="review-panel" id="review-panel"><div class="review-head"><span>METADATA & VALIDATION</span><div><button id="fullscreen-review" title="Full screen metadata and validation">⛶</button><button id="toggle-review" title="Slide metadata panel" aria-label="Slide metadata panel">›</button></div></div><nav class="tabs" id="tabs"><button data-tab="metadata" class="active">Metadata</button><button data-tab="validation">Validation</button><button data-tab="references">References</button><button data-tab="issues">Issues <span id="issue-count"></span></button><button data-tab="xml">XML editor</button><button data-tab="audit">History</button></nav><div id="review-content" class="review-content"></div></section>
+    </div>
+  </section>
+  <div id="status-panel"></div>
+</main>
+<input type="file" id="files" multiple accept=".pdf,.xml,.html,.htm,.xhtml,.zip" hidden><input type="file" id="zip-files" multiple accept=".zip" hidden><input type="file" id="folders" multiple webkitdirectory hidden>
+<div id="assign-menu" role="menu" hidden></div>
+<div id="toast" role="status"></div>
+<dialog id="dialog"><div class="dialog-top"><h2 id="dialog-title"></h2><button id="close-dialog" aria-label="Close">×</button></div><div id="dialog-body"></div></dialog>
+<script src="/app.js"></script>
+</body></html>

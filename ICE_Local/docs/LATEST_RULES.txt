@@ -1,0 +1,964 @@
+RULES AND GUIDELINES
+
+
+ID AND VERSION
+
+PROCESS ONLY IF THE PDF HAS A ID NO AND VERSION 
+PROCESS ONLY IF THE PDF, SCRAPPING AND HTML ID AND VERSION MATCH
+
+TITLE 
+
+PROCESS IF THE PDF TITLE AND HTML TITLE ARE THE SAME THIS IS IN REGARD TO BE IDENTICAL IN TERMS OF CONTENT
+PROCESS IF THE TITLE DIFFERENCE IS IN LINE FORMATTING $N$ REPRESENTING A BOLDING ETC
+PROCESS IF THE HTML AND PDF ARE SAME IN MEANING BUT ONE HAS MORE CONTENT F SO CAPTURE THE TITLE THAT HAS MORE CONTENT
+
+Title Capture from PDF vs HTML
+Always capture the more complete title from whichever version (PDF or landing page) has it.
+Exception: If the PDF and HTML titles are totally different (not just extra words), capture from HTM. Even though the HTML may have lesser words
+
+Example:
+HTML: femto-PIXAR: a neural network method for reconstruction of femtosecond X-ray free electron laser pulse energy
+PDF: femto-PIXAR: a self-supervised neural network method for reconstructing femtosecond X-ray free electron laser pulses
+
+✅ In this example: Not totally different → Choose the complete one (PDF).
+❌ Don’t treat extra words in PDF as a mismatch.
+
+Always ensure the PDF and Summary, Arxiv ID’s and versions Arxiv2507.81172v1 are the same. The difference or mismatch in the title content could also be due to this reason.
+
+Eg -  PDF title -  The main objective of differential - scope
+Summary (lading page) - The main objective of differential - - scope
+
+Even the hyphen needs to be treated as more complete, so basically always capture the  more complete in terms of it being a more complete detail. 
+
+Make sure that punctuation marks used to represent formatting on the HTML is not considered as extra content (eg- PDF - The main ingredient - clean water, air. 
+HTML - The main ingredient - - clean water, air.
+Here the HTML has an extra - (hyphen) so we select it as more complete
+
+
+Here is an example of formatting - 
+PDF - The main ingredient - clean water, air.
+HTML - The main $_ingredient_$ - - clean water, air.(here the word $_ingredient_$ is formatted in some way hence the punctuation marks used this should not be considered to be more complete)
+
+
+
+Remove the symbols or indicators that are sup/sub at the end of the title or at the beginning, that are not relevant to the title.
+Do not remove punctuation marks or sup/subd characters that are relevant to the title ( ?, !, etc), 
+
+Mentioned below are some scenarios that cannot be treated as a mismatch of content. We need to stick with the title in the PDF; we go with the summary title only if there is a mismatch in content.
+
+There are instances that the HTML will have eg- $5$ on both sides of a word or letter digit , etc. 
+
+This is not a title mismatch $ on either side $z > 6$ is to indicate that they are bolded or italicised. Any change in structure to letters and words are depicted very differently in the summary hence these situations need to be identified and captured accurately. 
+
+Do not capture the word Preprint and also the sup symbol in the title; Remove it in the HTML & the * at the end of the title
+
+When formulas or chemical formulas are in the title H2, O2 or H2O are sub in the PDF but not in the HTML make sure they are captured as they should be correctly and displayed in the XML in the same way as well.
+
+
+If a complex equation is found within the title text, replace the equation with (Formula presented).  
+
+If figures found within the title text, replace the figure with (Figure presented).  
+
+If Table found within the title text, replace the table with (Table presented).  
+
+
+Author Keywords
+
+Keywords are separated using a common separator A frequently used common separator (such as a semicolon, comma, hyphen, dash, dot, etc.)
+If the PDF has listed author keywords as Keywords and also has listed keywords under a different synonym/heading used to describe keywords. Then capture only the Keywords listed under the heading Keywords. Ignore the other keywords.  
+Other words used to describe Keywords are index terms, keywords and phrases, additional keywords and phrases.
+Also if Keywords appear in both before and after the Abstract capture the Keywords that are after the Abstract 
+
+
+Abstract 
+
+Abstract is usually captured from the first page.
+
+Abstract needs to be captured as it appears.
+
+Only english abstract will be captured in applications, 
+
+If a complex equation is found within the abstract text, replace the equation with (Formula presented). It needs to be a multiline formula that cannot be simply edited by a text editor. So if the formula can be edited and extracted in a meaningful way so that it will not change the result  we need to complete it if not we completely remove the formula and replace it with the formula presented. formula presented. Images are given as Figure presented, and tables as Tables Presented
+
+The codes that are mentioned at the end needs to be captured to the abstract only if they are connected to the abstract by being in the same paragraph 
+Eg-  if the abstract ends in sentence as below and the description of the code commences in the same sentence as below then we capture
+eg -  simply a matter of duty. Code is available at htpps:.......///rerer/
+however if the code or any other information begins from the next line after the Abstract ends the code will not be captured
+Eg -    simply a matter of duty. 
+           Code is available at htpps:.
+Here the code intro  and code details are in one line below the abstract so we can consider it as noit being part of the abstract 
+Basically capture the abstract as it appears
+
+
+Author Names and attributes section 
+
+Latin surnames: In Brazil, Portugal, Spain (and possibly other Latin countries) a surname is composed of two or more-family names. If it is not possible to confirm the format of the name in the footnotes, TOC, or references, assume that the first name listed is the given name and the other names are the surnames.
+
+In non-Latin names with more than two names, assume that the last name that appears is the surname and the other names are the given names.
+
+If part of the name appears in capitalized it will be considered as the surname.
+
+Hyphenated surnames: Capture the hyphen.
+
+Prefixes: meaning written by, such as: von, van, and par are ignored. 
+
+However, prefixes such as: van, von, de, da, la, della, der, du, des, de la, and van der, that are part of the surname are captured together with the family name, as it appears in the original.
+
+Hyphenated given names must retain the hyphen.
+If the given name is abbreviated and the complete given name cannot be found, capture the name as it appears in the source. 
+MOhd taken as given name / Md - initial
+THE MORE COMPLETE AUTHOR NAMES OT NAME IS CAPTURED
+
+
+Degrees, honorifics, and suffixes
+
+Degrees, honorifics, and suffixes are captured in their order of appearance and only when they appear directly before after or below the author name
+
+Treat names such as Pope John Paul II as if Pope is the honorific of the author; the same rule applies for similar titles such as Lord.
+
+ce:degrees	Abbreviation
+Professor	Prof.
+Doctor		Dr.
+Reverend	Rev.
+Honorable	Hon.
+Doctor of Philosophy	Ph.D.
+Bachelor of Science	BS
+Master of Business Administration	MBA
+Doctor of Law	LLD.
+
+In some instances we may see the degree or honorific displayed as below
+
+Peter smith 
+PHD
+Glasgow university 
+Scotland
+
+
+Here too we can capture the degree
+
+ce:suffix	Abbreviation
+Junior			Jr.
+Senior			Sr.
+3rd, 3, IIIrd, III (Roman numerals) 	3rd, 3, IIIrd, III (remains the same)
+
+
+Alternate Names
+
+Author names appearing in Non-Roman will be captured as the alternate name.
+
+
+Author Alias
+
+Authors may have an alias as part of their name, these are often found in parentheses in the name or in quotation marks within the name, as shown in the examples below:
+
+Christopher (Xiang) Lee / James Theodore "Teddy" Jones / Barbara LaFontaine aka Babs
+
+In the event that there are 2 Nick names the we capture only the first one.
+
+Capture the author alias, without parentheses or quotation marks.
+
+Author sequence and Author name capture
+
+Important to note author names are sequenced according to the API so we need to compare the PDF With the API to get this accurately
+Also there are instances that the name on the PDF and API are different and we need to create a new author so scenarios like these are very important here are some examples If the names match only and they can be identified as the same author based on the conditions below we need to always capture the more complete version to the XML
+
+Name Patterns 
+
+Scenario 1: Perfect Match
+PDF: "William Price" | API: "William Price" 
+	Result same author
+
+Scenario 2: API Expands First Name Initial
+PDF: "W Price" | API: "William Price"
+Same author - we capture more complete name from PDF or API
+
+Scenario 3: API Expands Middle Initial (Same Letter)
+PDF: "Alan D Parker" | API: "Alan Davis Parker"
+Same author - we capture more complete name PDF or API
+
+Scenario 4: PDF More Complete
+PDF: "William P Price" | API: "W Price" or vice versa
+This needs to be treated as two authors and both need to be captured the, sequence changes and the author on the API is given prominence in the sequence and the author who is the PDF is placed last in the sequence provided that another author on the PDF that is after him in order is not mentioned in the API then this author/s will be placed in the sequence before the other who is not on the API and after him in order
+
+Scenario 5: Middle Name Mismatch
+PDF: "Alan P Parker" | API: "Alan Davis Parker" (P ≠ D)
+Clearly two author sequence rule needs to be followed 
+
+Scenario 7: Multiple Authors (Use PDF)
+PDF: "Nigel Smith, Xu Wen" | 
+API: has all the names as one author
+Surname - Xu wen 
+Given name - Nigel smith 
+This the API names needs to be ignore as they are clearly the same two authors indicated incorrectly 
+
+If the PDF has John I. smith and API has John I smith (missing the fullstop)
+Then we capture the more complete name initial which has the “.” full stop in it
+
+IF NEW AUTHORS ARE ADDED TO THE SEQUENCE THEY WILL BE CREATED IN A NEW AUTHOR GROUP SEQ AND GIVEN THE LAST AUTHOR GROUP SEQ NO, HOWEVER THE AUTHOR/S WILL RETAIN THERE SEQUENCE AS PER THE API
+
+F AN AUTHOR FOUND IN THE PDF IS NOT SHOWN IN THE API HE THEY WILL BE GIVEN THE LAST AUTHOR SEQ NO, HOWEVER WILL BE INCLUDED IN THE OTHER AUTHOR GROUPS HOWEVER WITH THE SEQUENCE THEY WILL BE RETAINED AS PER THE SEQUENCE RULE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+H2O
+
+
+H <inf>2</inf>O
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Email Address
+
+Do not capture a period or angle brackets around the email.
+
+If an author has more than one email address, capture the first or more relevant email address only
+
+Include only one @ symbol per address
+
+In instances where  there are email address with only numbers 
+
+3213213121@gmail.com we capture and match these kind of emails to the author if there is no doubt that it belongs to them, if there is any doubt at all they are ignored.
+
+
+ORCID
+
+The ORCID may be visible in the PDF and also indicated by the ORCID logo. 
+
+The ID needs to be extracted from the link that's connected to the ORCID logo which can be seen on the PDF. 
+If the name of the author does not match the name in the profile do not capture the ORCID no
+
+If no number is displayed in the link then do not capture
+
+There are instances that the link leads to the main page of the site or search page here we need to search then name in the box or the number and match no with the author (of course if it clearly belongs to the author)
+
+			
+Affiliations
+
+The affiliations can appear just below the author names section at the bottom paragraphs at the footnote at the last page of the citation, after references and in some rare cases before the references.
+
+There can be one or more affiliation within citation and in certain citations affiliations will not be available.
+
+The affiliation in an author group usually is a company, university, school, or institution. 
+
+Do not capture CV, resume, or footnotes referring to previous affiliations, or society memberships and job titles, designations.
+
+Do not capture a "current", "present", or "former" address (affiliation) OR WORKED AT WAS WORKING, WORK DONE WHILE AT, etc when the author/s have original affiliations. However they need to be captured if the author does not have original affiliations.
+
+In cases where affiliation information is limited, such as only a city or country name, capture all information available.
+
+If affiliations are available in two locations always capture the more complete affiliation, 
+
+however do not use correspondence affiliation to complete original/normal affiliation.
+
+Washington D.C needs to be taken as one city 
+
+State
+In state capture the province and state information from addresses in Australia, Canada,and the USA only. Similar and equivalent geographical areas in other countries are captured as “address part
+
+Country
+
+All countries are captured as they appear in the source, with the following required exceptions
+
+Scotland, N. Ireland and Wales here the Country code is given as GBR and the mentioned are left in the source text.
+
+Affiliations that have both Hong Kong and China in them - Always tag HONG KONG as a country 
+
+Organizations in Taiwan or in the "Republic of China" (do not confuse this with the People’s Republic of China, which is China), are captured with the country code for Taiwan (TWN).
+
+Do not add a country code for affiliations in Crimea when the address given does not have a country code
+
+Do not add a country code for affiliations in Palestine or Israel when no country name is given in the source file.
+
+Macau and Hong Kong are considered autonomous territories in China. Any affiliation that is clearly from one of these territories must be captured with its three-letter country code, MAC and HKG, respectively.
+
+Country code always in three digits iso code	
+
+Affiliations are case sensitive and therefore need be captured in Title text even in the source text
+
+
+Address part
+
+Below information will be captured in address-part
+street names  / location numbers / P.O. Box information / building/apartment /office   `names Campus
+
+
+City tag to ba after the Address part tag in the XML sequence There can be only one Address part tag	
+
+Postal code - If the word CEDEX is mentioned in address, it needs to be inserted after the postal code and included in the postal code tag
+
+	Author group 
+	
+Author group sequence is created based on the order of the affiliations. 
+Authors with no affiliations are created in a single author group.
+
+
+Affiliation Text
+
+If there is more than one affiliation and there is no indication which affiliation belongs to    which author, capture them as Note Text in the RED application. This will appear in ce:text element in the XML.
+
+
+All affiliation information is captured in this element, which is used only once.
+
+Matching Authors and Affiliations
+
+Authors and affiliations should be linked as per the indicators noted with affiliations using  the match widget in the RED application.
+          
+The indicator can be a number, a letter, or a symbol (or a combination of these).
+
+Use below table to match authors and affiliations. 
+
+
+Authors	Affiliations	Indicators present?	 Instructions
+1			0		No	 	No action needed
+1			1	Not relevant		The affiliation should be matched with the author.
+1			>1	Not relevant		All the affiliations should be matched with the author.
+>1			0		No		No action needed.
+>1			1		Not relevant	The affiliation should be matched with all the authors.
+>1			>1		Yes		Affiliations should be matched wit well.h authors as per the indicators.
+>1			>1		No		In this situation, assumption cannot be made, and affiliation should be captured as note text using Y shortcut key in RED application. 
+>1			>1	Only for some	Indicator available	 affiliations should be matched with relevant authors and ignore which do not have the indicators.
+
+Also in the event that the Source text is mentioned as below
+
+University of Texas at Austin - here even thought the name of the University is also The same we need to take at Austin as the city as it’s mentioned as “at Austin
+
+University of California at San Diego - University of California - organization / San Diego - city 
+University of California, San Diego - University of California - organization / San Diego - city 
+University of California at San Diego, San Diego - University of  California at San Diego as the organization and San Diego as the City
+ University of Maryland, College Park - University of Maryland, - org  College Park  - city
+
+
+Reference 
+
+
+References are usually available at the end of a citation with titles such as reference list, list of cited references, bibliography, recommended reading, further reading, or notes.
+
+If both Reference and Footnote references are available capture Reference only. 
+
+If only reference information available in the citation are footnote references, capture the footnote references.
+
+If the references are found entirely within the text (not at the bottom of the page), those references will not be captured.
+
+If the references are available only in Non-Roman, do not capture the references for that citation.
+
+There are below reference types can be found in a citation
+
+Incomplete references
+Incomplete references are captured as they are found.
+References containing only the single word ibid, supra, op. cit. or loc. cit. are not captured.
+
+Multiple references
+Reference, with multiple references within a reference.
+
+If multiple references are found within a reference, references should be captured separately.
+
+ibid., supra, op.cit., and loc. cit. terms are being used to refer to previous references and indicate the possibility of having multiple references.
+
+If reference contains only one of these terms and no further information, it is not a new reference and therefore is not captured
+
+In some cases, the author name, or an acronym of the title from the previous reference is used to refer to a previous reference.
+
+Reference with multiple references
+Kobayashi, A., Miyamoto, A., Kobayashi, H., Clark, A., & Underhill, A. E. (1991). Chem. Lett., 2163; ibid., (1992). 1193-1195, Syn. Met., 56, 2927 (1993).
+
+Separated references
+Kobayashi, A., Miyamoto, A., Kobayashi, H., Clark, A., & Underhill, A. E. (1991). Chem. Lett., 2163.
+
+Kobayashi, A., Miyamoto, A., Kobayashi, H., Clark, A., & Underhill, A. E. (1992). Chem. Lett. 1193-1195.
+
+Kobayashi, A., Miyamoto, A., Kobayashi, H., Clark, A., & Underhill, A. E. (1993). Syn. Met., 56, 2927.
+
+				
+INCOMPLETE REFERENCE 
+If the reference on the PDF is as shown below they need to be completed using the author name/s in the previous affiliations.
+
+Agurto-Gangas, C., Pérez, L. M., Sierra, A., et al. 2025, ApJ, 989, 
+
+                           2)  ____________ Pérez, L. M., et al. 2018, ApJ, 869, L41
+
+
+ 
+XML 
+
+ <ref-fulltext>Agurto-Gangas, C., Pérez, L. M., Sierra, A., et al. 2025, ApJ, 989, 4</ref-fulltext>
+<ce:source-text>Agurto-Gangas, C., Pérez, L. M., Sierra, A., et al. 2025, ApJ, 989, 4</ce:source-text>
+            </reference>
+            <reference seq="2">
+              <ref-info/>
+              <ref-fulltext>Andrews, S. M., Huang, J., Pérez, L. M., et al. 2018, ApJ, 869, L41</ref-fulltext>
+              <ce:source-text>____________ J., Pérez, L. M., et al. 2018, ApJ, 869, L41</ce:source-text>
+            </reference>
+       
+AND RECREATED IN THE FULL TEXT ONLY
+
+IF THERE ARE HYPERLINK IN THE REFERENCES THEY NEED TO BE REMOVED AND NOT SHOW IN FULL AND SOURCE TEXT 
+
+[4] M. She, F. Seegr¨aber, D. Nakath, and K. K¨oser, “Refractive
+colmap: Refractive structure-from-motion revisited,” arXiv preprint
+arXiv:2403.08640, 2024. 2
+[5] D. Levy, A. Peleg, N. Pearl, D. Rosenbaum, D. Akkaynak, S. Korman,
+and T. Treibitz, “Seathru-nerf: Neural radiance fields in scattering media,”
+in CVPR, 2023. 2, 3, 4, 6, 10, 18
+[6] H. Gupta and K. Mitra, “Unsupervised single image underwater depth
+estimation,” in ICIP. IEEE, 2019. 2
+[7] B. Yu, J. Wu, and M. J. Islam, “Udepth: Fast monocular depth estimation
+for visually-guided underwater robots,” in IEEE ICRA, 2023. 2
+[8] F. Zhang, S. You, Y. Li, and Y. Fu, “Atlantis: Enabling underwater
+depth estimation with stable diffusion,” in Proceedings of the IEEE/CVF
+Conference on Computer Vision and Pattern Recognition, 2024, pp.
+11 852–11 861. 2
+[9] S. Amitai, I. Klein, and T. Treibitz, “Self-supervised monocular depth
+underwater,” in IEEE ICRA, 2023. 2
+[10] N. Varghese, A. Kumar, and A. Rajagopalan, “Self-supervised monocular
+underwater depth recovery, image restoration, and a real-sea video dataset,”
+in ICCV, 2023. 2
+[11] L. Yang, B. Kang, Z. Huang, X. Xu, J. Feng, and H.
+
+THESE DIGITS APPEARING AT THE BACK ARE HYPERLINKS AND ARE LINKED TO A PAGE IN THE DOC/FILE ITSELF. Hence, remove only the hyperlinks. DO NOT REMOVE EXTERNAL LINKS. 
+
+
+Reference sequence in the PDF are not mentioned in the Source and full  text
+
+Capturing the correspondence author/s
+
+	Single author scenarios
+
+ Has email + affiliation - yes mark as correspondence 
+ Has only email - yes mark as correspondence
+ Has only affiliation - yes mark as correspondence
+ No affiliation or email - don't mark as correspondence
+ No affil/email but has * or ✉ mark - dont mark correspondence
+ No affil/email but clearly mentioned as correspondence - yes as correspondence
+
+Multiple Author Scenarios
+
+ Author has * or ✉ → denotes correspondence - yes
+ * mark → but used for other info (equal contrib etc) - do not mark
+ ✉ mark → but used for other info - do not mark
+ Author/s and email/s both do not have * or ✉ but one or more emails match the author/s - do not mark
+ Author/s has no * or ✉ but email/s have them; matches Author/s names - do not mark
+ Only one email with * or ✉ and matches one author from multiple - do not mark
+ Author has no * or ✉ – Affiliation has * or ✉ + matching email domain of an email linked to the author - do not markAuthor correspondence 
+
+Correspondence person
+
+The correspondence person in the source, usually indicated by:
+•	Corresponding author: /  Reprint request to: / All correspondence t/ Contact address:
+•	Symbols next to an author’s name such as an envelope or an asterisk which refer to elsewhere in the citation.
+ 
+If there are no specific indicators to identify the correspondence information, do not invent a correspondence author/s
+
+
+Autor/s mentioned as correspondence - Mark as correspondence  
+Author and affiliation both have * or ✉ → Mark as Correspondence
+Author has an asterisk mark and ORCID has an asterisk mark - yes mark as correspondence 
+Author/s have an asterisk mark - however the * mark is mentioned and it indicates some other piece of information - eg - contributed equally, was at, formerly
+
+Author/s have as asterisk and/or envelope mark - it does not denote anything  - yes mark the respective author/s as corresponding authors
+
+Author/s don’t have asterisk and/or envelope mark - however emails do have one or more of the symbols -  Do not mark them as corresponding authors
+
+Author/s don’t have asterisk and/or envelope mark - however affiliation has an asterisk or envelope - do not mark the authors as correspondence
+
+Note that the correspondence author are always judged in terms of the indicators mentioned for the authors		
+
+Address correspondence
+
+
+directly mentioned as corresponding address - Yes - mark the mentioned address as Address corresponding 
+
+An affiliation mentioned as corresponding or corresponding address - Mark the address or affiliation as Address corresponding 
+
+An affiliation or address marked as contact address or envelope sign- Yes - Mark the respective address as Address corresponding 
+
+author has an affiliation and also an * or envelope sign and also a current, present or now at address or affiliation mentioned elsewhere - Yes - 
+Instructions - mark the current/now/ present/now at address as the corresponding address
+
+author has affiliation and a contact address mentioned below or elsewhere - Yes - 
+Instructions - mark the contact address as the corresponding address 
+A) If the contact address and affiliation are identical matches word to word, then capture only one and match to the author and also mark as corresponding address
+B) If the contact addresses are the same but not identical, capture both and match both to the author, mark the contact address as the corresponding address
+
+A) If the contact address and affiliation are identical matches word to word, then capture only one and match to the author and also mark as corresponding address
+B) If the contact addresses are the same but not identical, capture both and match both to the author, mark the contact address as the corresponding address
+
+	
+
+
+
+The Exact Parameters of A bch groups - html
+
+ The Exact Parameters of A Family of -  BCH Code -pdf
+ The Exact Parameters of A Family of – BCH Code -html
+
+<ce:initials>Z.</ce:initials>
+<ce:surname>Sun</ce:surname>
+<ce:given-name>Zhonghua</ce:given-name>
+<ce:e-address>sunzhonghuas@163.com</ce:e-address>
+</author>
+<affiliation>
+<organization>School of Mathematics</organization>
+<organization>Hefei University of Technology</organization>
+<address-part>Anhui</address-part>
+<city>Hefei</city>
+<postal-code>230601</postal-code>
+<country iso-code="CHN"/>
+<ce:source-text>School of Mathematics, Hefei University of Technology, Hefei, Anhui, 230601, China</ce:source-text>
+</affiliation>
+</author-group>
+<ce:initials>Z.</ce:initials>
+<ce:surname>Sun</ce:surname>
+<ce:given-name>Zhonghua</ce:given-name>
+<ce:e-address>sunzhonghuas@163.com</ce:e-address>
+</author>
+<affiliation>
+<organization>Xi’an Jiaotong University</organization>
+<organization>Faculty of Electronic and Information Engineering</organization>
+<organization>School of AutomationScience and Technology</organization>
+<ce:source-text>Xi’an Jiaotong University, Faculty of Electronic and Information Engineering, School of AutomationScience and Technology </ce:source-text>
+</affiliation>
+</author-group>
+
+
+Xi’an Jiaotong University, Faculty of Electronic and Information Engineering, School of AutomationScience and Technology (weichao.liang@xjtu.ed
+
+

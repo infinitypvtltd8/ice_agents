@@ -1,0 +1,1283 @@
+BUILD: DETERMINISTIC ARXIV CITATION EXTRACTOR & ELSEVIER XML GENERATOR
+Build a production-ready desktop/web application for processing arXiv preprint citation packages and generating XML in the required Elsevier ANI-style structure.
+1. FUNDAMENTAL REQUIREMENT — NO AI DURING PRODUCTION PROCESSING
+AI may be used ONLY while developing this application.
+Once the application is built, normal citation processing MUST NOT use:
+OpenAI
+Gemini
+Claude
+Copilot APIs
+LLM APIs
+AI agents
+embeddings APIs
+AI OCR APIs charged per token/request
+generative AI classification
+generative AI extraction
+external AI inference services
+There must be ZERO AI-token/AI-credit consumption when processing production files.
+The production processing pipeline must be deterministic and based on:
+document parsing
+coordinate/layout extraction
+OCR only where required
+regex/pattern matching
+dictionaries
+deterministic parsers
+configurable rule engine
+cross-document comparison
+XML templates/builders
+XSD/schema and business-rule validation
+human review where a rule cannot safely resolve an ambiguity
+Do NOT secretly add an LLM fallback.
+If deterministic processing cannot confidently resolve something, FLAG/HOLD it for human review instead of guessing.
+
+2. APPLICATION PURPOSE
+The application receives a citation/article package containing:
+REQUIRED/EXPECTED INPUTS:
+Main article PDF
+Scrapping XML
+API XML
+HTML support document
+Optional future support documents should also be supported.
+The MAIN SOURCE is the PDF.
+Support documents are verification sources and, for certain fields/rules, authoritative sources.
+The application must:
+UPLOAD
+→ EXTRACT
+→ IDENTIFY
+→ CROSS-CHECK
+→ APPLY RULES
+→ FLAG EXCEPTIONS
+→ ALLOW HUMAN REVIEW
+→ BUILD XML
+→ VALIDATE XML
+→ EXPORT XML
+
+3. INPUT PACKAGE HANDLING
+Support:
+individual files
+multiple-file upload
+ZIP upload
+folder upload
+batch processing
+Automatically group files using the arXiv/article ID.
+Example package:
+2609.15336.pdf
+2609.15336.html
+2609.15336_Api.xml
+2609.15336_Scrapping.xml
+Detect missing support documents and display warnings.
+Never silently associate uncertain files.
+
+4. DOCUMENT VIEWER
+The application MUST contain an integrated document workspace.
+The user must be able to view:
+PDF
+Full PDF viewer with:
+page navigation
+zoom
+search
+selectable text
+extracted regions
+metadata highlights
+reference highlights
+author highlights
+affiliation highlights
+email highlights
+ORCID highlights
+correspondence indicators
+page numbers
+HTML
+Rendered HTML view AND raw/source view.
+API XML
+Formatted XML tree and raw XML view.
+Scrapping XML
+Formatted XML tree and raw XML view.
+Generated XML
+Formatted XML editor with syntax highlighting.
+Recommended layout:
+LEFT:
+Document navigation
+CENTER:
+Selected source document
+RIGHT:
+Extracted metadata / validation / rule results
+BOTTOM or separate tab:
+Generated XML editor
+Allow side-by-side comparison, for example:
+PDF | API XML
+PDF | HTML
+PDF | Scrapping XML
+Generated XML | PDF
+Generated XML | Source XML
+
+5. PDF EXTRACTION ARCHITECTURE
+DO NOT simply convert PDF → Markdown and discard PDF structure.
+Create TWO representations.
+A. PRIMARY — Layout/Coordinate Representation
+For every extracted text element preserve:
+page number
+block
+line
+word/token
+bounding box
+reading order
+font information where available
+font size
+bold/italic where detectable
+superscript/subscript relationship where detectable
+links
+annotations
+symbols
+nearby text
+column information
+Example internal structure:
+{
+"page": 1,
+"block": 7,
+"line": 2,
+"text": "Marta Lazzaretti 1,2*",
+"bbox": [x1,y1,x2,y2],
+"font_size": 11,
+"bold": false,
+"italic": false
+}
+This is critical for:
+author order
+superscript affiliation indicators
+footnotes
+correspondence marks
+ORCID links/logos
+reference segmentation
+multi-column papers
+B. SECONDARY — Normalized Markdown/Text
+Generate an internal .md or normalized text representation for:
+searching
+debugging
+rule matching
+section detection
+reviewing extracted text
+Markdown is NOT the source of truth for spatial relationships.
+Store both.
+
+6. OCR STRATEGY
+First determine whether each PDF page has usable embedded text.
+Text PDF
+Use native PDF extraction.
+Scanned PDF / image-only page
+Use LOCAL OCR.
+Recommended pipeline:
+PDF
+→ native text detection
+→ image detection
+→ local OCR only where necessary
+→ coordinate reconstruction
+OCR should return bounding boxes where possible.
+Do NOT OCR the entire document when reliable embedded text exists.
+Allow the reviewer to see:
+ORIGINAL PDF
+vs
+EXTRACTED TEXT/OCR
+Flag low-quality OCR regions.
+Never silently replace clearly available PDF text with lower-quality OCR text.
+
+7. INTERNAL EVIDENCE MODEL
+Every extracted field must preserve provenance.
+Example:
+{
+"field": "title",
+"value": "...",
+"source": "PDF",
+"page": 1,
+"bbox": [...],
+"verification_source": "HTML",
+"verification_value": "...",
+"status": "MATCH",
+"rule_id": "TITLE-001"
+}
+Possible statuses:
+MATCH
+NORMALIZED_MATCH
+MISMATCH
+MISSING
+HOLD
+MANUAL_REVIEW
+VERIFIED
+OVERRIDDEN_BY_RULE
+Never lose the original source value.
+
+8. METADATA TO EXTRACT
+Extract at minimum:
+arXiv ID
+version
+title
+abstract
+keywords
+authors
+author sequence
+given names
+surnames
+initials
+author indicators
+affiliations
+author ↔ affiliation mapping
+organizations
+address parts
+city
+state/province where rules require
+postal code
+country
+ISO country code
+affiliation source text
+emails
+ORCID
+corresponding author
+correspondence affiliation
+correspondence email/info
+references
+supplementary references where applicable
+
+9. SOURCE AUTHORITY MATRIX
+Implement the following source authority rules.
+ARXIV ID + VERSION
+Primary:
+PDF
+Verify against:
+Scrapping XML
+HTML
+ID/version must match support documents.
+If mismatch:
+HOLD.
+Also HOLD when ID/version is not located in its expected PDF location and requires unusual-location extraction.
+
+TITLE
+Primary:
+PDF
+Verification:
+HTML
+Compare textual content.
+Ignore differences caused only by:
+capitalization
+formatting
+bold/italic representation
+formatting markup
+If actual textual content differs:
+HOLD.
+
+ABSTRACT
+Source:
+PDF
+Capture clearly from PDF.
+Possible headings include:
+Abstract
+Synopsis
+Summary
+Summary and Conclusion
+It may begin on one page and continue onto another.
+Do not replace it using API/HTML unless a future explicit rule says to do so.
+
+KEYWORDS
+Primary:
+PDF.
+Possible labels include:
+Keywords
+Index Terms
+Words and Phrases
+Additional Keywords and Phrases
+Usually front page but may appear later.
+
+AUTHORS
+PDF determines visible author occurrence/order.
+API XML is used to verify author identity and determine:
+given name
+surname
+author sequence verification
+If PDF and API authors do not match:
+HOLD.
+If author sequence differs:
+HOLD.
+Read PDF author order left-to-right, continuing appropriately to following lines.
+
+AFFILIATIONS
+Source:
+PDF ONLY.
+Use PDF indicators/superscripts/symbols to connect authors to affiliations.
+Do not source normal affiliations from API XML or HTML.
+Capture current/present/former/“work completed at” style affiliations ONLY when no original/main affiliation exists.
+If original affiliations exist, do not replace them with current/former affiliations.
+If multiple affiliation locations exist, use the more complete original affiliation.
+Do not use correspondence affiliation to artificially complete a normal affiliation.
+
+EMAIL
+Source:
+PDF ONLY.
+Maximum:
+one email per author.
+An incomplete email may be completed ONLY if the missing information is extremely clear and exists elsewhere on the PDF itself.
+Do not use web searches or external information to complete emails.
+
+ORCID
+Source:
+PDF ONLY.
+Detect:
+visible ORCID number
+ORCID URL
+hyperlink attached to ORCID logo/icon
+Store normalized ORCID where safely extractable.
+
+CORRESPONDING AUTHOR
+Source:
+PDF ONLY.
+Use explicit text or valid author indicators.
+Potential textual signals:
+Corresponding author
+Reprint request to
+All correspondence to
+Contact address
+Potential author symbols:
+
+
+
+envelope symbol
+However the symbol must belong to the AUTHOR and must not clearly indicate another purpose.
+Do NOT mark an author as corresponding merely because the email or affiliation carries an asterisk.
+
+REFERENCES
+Source:
+PDF ONLY.
+References may occur in:
+main reference section
+supplementary reference section
+Possible headings:
+References
+Reference List
+List of Cited References
+Bibliography
+Recommended Reading
+Further Reading
+Notes
+References are required for applicable articles from 1970 through the current year.
+If both normal references and footnote references exist:
+capture normal references only.
+If ONLY footnote references exist:
+capture footnote references and FLAG/HOLD according to configured workflow.
+References occurring only inline within body text are not captured.
+If references are entirely non-Roman:
+do not capture those references.
+Incomplete references:
+capture exactly as found.
+DO NOT search elsewhere to complete incomplete references.
+A reference containing ONLY:
+ibid
+supra
+op. cit.
+loc. cit.
+is not a new reference.
+Multiple bibliographic references embedded inside one numbered source reference must be split into separate references when the rules indicate they represent separate works.
+Remove source sequence numbers from reference source text.
+Preserve reference order.
+
+10. HOLD / FLAG ENGINE
+Never guess ambiguous metadata.
+Generate HOLD flags for situations including:
+ID
+ID/version in unusual location
+PDF ID/version differs from support documents
+ID/version missing from expected location
+Title
+textual title mismatch
+Authors
+PDF/API author mismatch
+author sequence mismatch
+Affiliations
+affiliations not in expected/general locations
+multiple affiliations exist but author/affiliation indicators are absent
+References
+no main reference section
+only footnote references
+references in two distinct locations
+suspicious blank/underscore sections such as "_____"
+ambiguous reference splitting
+Every flag must contain:
+rule ID
+severity
+field
+explanation
+source
+page
+evidence text
+suggested human action
+
+11. AFFILIATION RULE ENGINE
+An affiliation can contain:
+organization(s)
+address-part(s)
+city
+state
+postal-code
+country
+country ISO code
+ce
+Preserve original source text.
+DO NOT invent missing affiliation data.
+If source only says:
+Department of Mathematics, University of Missouri
+do not manufacture city/country.
+Use available geographical information only where explicitly allowed by the rule set.
+State/province handling:
+Capture state/province in the state field for:
+USA
+Canada
+Australia
+Use standard two-letter abbreviations where required.
+Other similar geographical divisions generally belong in address-part unless another explicit rule applies.
+Country handling must support three-letter ISO mappings required by the project.
+Special rules include:
+Scotland / Wales / Northern Ireland → GBR while preserving source wording
+Hong Kong → HKG
+Macau → MAC
+Taiwan / Republic of China → TWN
+Crimea with no country explicitly supplied → do not invent country
+Palestine/Israel where source has no country → do not invent country
+Preserve affiliation source-text.
+Case and source wording matter.
+Create a configurable country/state dictionary rather than hard-coding these transformations throughout the application.
+
+12. AUTHOR NAME PARSING
+API XML is authoritative for determining given-name/surname when required by the rules.
+Generate initials deterministically.
+Preserve hyphens.
+Latin-name rules must support multi-family-name surnames.
+For non-Latin names with more than two components, where no better explicit source exists, apply the project's configured surname rule.
+Capitalized surname cues may be used according to the project rulebook.
+Surname prefixes such as:
+van
+von
+de
+da
+la
+della
+der
+du
+des
+de la
+van der
+must remain with the surname when they are part of the source surname.
+Hyphenated given names retain hyphens.
+If a given name is abbreviated and a complete name cannot be reliably established using the allowed source, retain the source form.
+Examples/special handling must be configurable rather than buried in UI code.
+
+13. AUTHOR ↔ AFFILIATION GROUPING
+This is one of the most important components.
+Build author groups from affiliation membership.
+An author belonging to multiple affiliations may legitimately appear in multiple author-group elements.
+Author seq must represent the original global author sequence, not the author's position inside an affiliation group.
+Example concept:
+Authors:
+A¹²
+B¹
+C³
+D²
+must produce groups:
+Group 1 → A, B → Affiliation 1
+Group 2 → A, D → Affiliation 2
+Group 3 → C → Affiliation 3
+Do NOT renumber A when repeated in group 2.
+Store internally:
+authors[]
+affiliations[]
+author_affiliation_edges[]
+Then generate author groups from that graph.
+Do not attempt to derive XML groups directly from raw strings.
+
+14. SPECIAL AFFILIATION COMPOSITION
+Handle cases where:
+a general institution affiliation is given
+department-level information is provided in author footnotes
+Example conceptual source:
+Authors share:
+The Pennsylvania State University, University Park, PA 16802
+Footnote:
+Author A → Department of Aerospace Engineering
+Author B → Department of Mathematics + Department of Meteorology...
+Author C → Department of Electrical Engineering
+The rule engine must combine the applicable PDF-supplied pieces for each author WITHOUT introducing outside information.
+Maintain provenance for every component.
+
+15. CORRESPONDENCE RULE ENGINE
+Single author
+If single author has:
+email + affiliation → correspondence = yes
+only email → yes
+only affiliation → yes
+neither → no
+neither but only unexplained * / envelope → do not automatically mark
+explicitly identified as correspondence → yes
+Multiple authors
+Author has * or envelope and it denotes correspondence:
+yes.
+Author has symbol but symbol clearly means:
+equal contribution
+current address
+former address
+employment note
+another non-correspondence purpose
+→ no.
+Only email has *:
+no.
+Only affiliation has *:
+no.
+Author has no corresponding indicator while matching email has one:
+no.
+The correspondence decision must be evidence-based and display the evidence in the UI.
+
+16. REFERENCE EXTRACTION ENGINE
+Reference extraction must be deterministic.
+Pipeline:
+detect reference section headings
+determine section boundaries
+detect columns
+detect individual reference boundaries
+remove reference sequence labels from source text
+detect multiple references inside one numbered entry
+split where rules require
+preserve complete source text
+maintain reference order
+assign output sequence
+calculate refcount
+Reference count must equal the number of generated <reference> elements.
+Never arbitrarily truncate references.
+The application must specifically detect situations where, for example, the PDF contains 82 references but extraction produced only 31.
+Display:
+Detected candidates: 82
+Generated references: 82
+Skipped: 0
+Held: 0
+If counts differ, prominently warn the operator before export.
+
+17. XML STRUCTURE
+The generated XML must follow the supplied approved examples EXACTLY.
+Do not invent a new schema.
+Base structure includes the required namespaces and hierarchy such as:
+units
+unit
+unit-info
+unit-content
+bibrecord
+item-info
+head
+tail
+The generated structure must support elements including:
+item IDs
+citation information
+title
+authors
+author groups
+affiliations
+abstract
+keywords
+correspondence
+bibliography
+references
+Use an XML DOM/builder.
+DO NOT generate production XML using string concatenation.
+Correctly escape:
+&
+<
+quotes where required
+Unicode characters
+XML entities
+Preserve namespace handling.
+
+18. XML TEMPLATE SYSTEM
+Create a configurable XML template/schema layer.
+Separate:
+STATIC VALUES
+from:
+DYNAMIC VALUES.
+Example static/configurable values may include:
+unit type
+supplier-id
+citation-type
+default language
+source attributes
+Dynamic values include:
+article ID
+version
+title
+authors
+affiliations
+abstract
+keywords
+correspondence
+references
+refcount
+The XML schema/template must be editable through configuration without rewriting extraction logic.
+
+19. RULE ENGINE
+Rules MUST NOT be scattered through application code.
+Build a centralized rule engine.
+Recommended structure:
+rules/
+id_rules.json
+title_rules.json
+author_rules.json
+affiliation_rules.json
+correspondence_rules.json
+reference_rules.json
+country_rules.json
+xml_rules.json
+Each rule should support fields such as:
+rule_id
+name
+description
+priority
+source
+verification_source
+conditions
+action
+severity
+hold_reason
+enabled
+Example:
+{
+"rule_id": "TITLE-001",
+"field": "title",
+"primary_source": "PDF",
+"verification_source": "HTML",
+"comparison": "normalized_text",
+"ignore_case": true,
+"ignore_formatting": true,
+"on_mismatch": "HOLD"
+}
+The UI must contain a Rule Viewer.
+Preferably provide an administrator Rule Editor.
+
+20. METADATA REVIEW SCREEN
+Create a table with columns:
+FIELD
+PDF VALUE
+API VALUE
+SCRAPPING VALUE
+HTML VALUE
+FINAL VALUE
+SOURCE USED
+RULE
+STATUS
+EDIT
+Example:
+Title
+PDF: ...
+HTML: ...
+Final: ...
+Rule: TITLE-001
+Status: MATCH
+Authors must have expandable rows.
+Affiliations must display author relationships.
+References must have an individual reference editor.
+
+21. HUMAN EDITING
+The operator must be able to edit extracted data BEFORE XML generation/finalization.
+Editable fields include:
+ID/version
+title
+abstract
+keywords
+authors
+initials
+given name
+surname
+email
+ORCID
+affiliations
+organization components
+addresses
+city
+state
+postal code
+country
+correspondence
+references
+Every manual edit must record:
+original value
+new value
+timestamp
+field
+source
+optional reason
+Do not destroy extracted values.
+
+22. XML EDITOR
+Include an integrated XML editor with:
+syntax highlighting
+formatting
+line numbers
+search
+validation
+error navigation
+manual editing
+When the user edits structured metadata, XML should regenerate.
+If the user directly edits XML, clearly indicate that XML now contains manual changes.
+Never silently overwrite direct XML edits.
+Provide:
+REGENERATE FROM METADATA
+and
+KEEP MANUAL XML
+as explicit actions.
+
+23. VALIDATION
+Before export run:
+XML validation
+well-formed XML
+namespaces
+expected hierarchy
+required attributes
+allowed elements
+escaping
+encoding
+optional XSD validation when schema is supplied
+Business validation
+Check:
+ID/version
+title
+author count
+author sequence
+affiliation mapping
+emails
+ORCID format
+correspondence
+bibliography
+reference count
+required source text
+country codes
+duplicate references
+missing required fields
+Cross-source validation
+Check:
+PDF ID ↔ Scrapping XML ↔ HTML
+PDF title ↔ HTML
+PDF authors ↔ API XML
+PDF author order ↔ API order
+Never silently resolve a true mismatch.
+
+24. XML ERROR NAVIGATION
+If XML parsing/validation reports something such as:
+line 92 column 209
+the UI must:
+jump directly to line 92
+highlight the problematic location
+show the parser message
+show the associated metadata field where possible
+
+25. AUDIT TRAIL
+For every article maintain a processing log.
+Example:
+ID-001 PASS
+TITLE-001 PASS
+AUTHOR-002 PASS
+AFF-013 HOLD
+REF-004 PASS
+XML-002 PASS
+Record:
+rule
+input
+decision
+source
+page
+timestamp
+manual override if any
+Allow audit export as JSON/CSV.
+
+26. BATCH PROCESSING
+Support at least:
+1 file
+5 files
+25 files
+and architect it to scale higher.
+Each article must process independently.
+Dashboard:
+TOTAL
+QUEUED
+PROCESSING
+VERIFIED
+HOLD
+ERROR
+COMPLETED
+Batch processing must continue when one article fails.
+
+27. APPLICATION WORKFLOW
+SCREEN 1 — DASHBOARD
+New Batch
+Previous Batches
+Rules
+Settings
+SCREEN 2 — UPLOAD
+Drop PDF/support files/ZIP/folder.
+SCREEN 3 — PACKAGE VALIDATION
+Show matched files.
+SCREEN 4 — EXTRACTION
+Show extraction progress.
+SCREEN 5 — REVIEW
+PDF + support docs + metadata comparison.
+SCREEN 6 — FLAGS
+Show all HOLD/exception rules.
+SCREEN 7 — XML
+Generated XML + editor + validation.
+SCREEN 8 — EXPORT
+Download:
+XML
+audit report
+optional normalized extraction/MD
+optional ZIP
+
+28. RECOMMENDED INTERNAL DATA MODEL
+ArticlePackage
+article_id
+version
+files
+pages
+extracted_blocks
+metadata
+authors
+affiliations
+author_affiliation_edges
+correspondence
+references
+flags
+validation
+generated_xml
+audit_log
+Author
+global_seq
+displayed_name
+given_name
+surname
+initials
+email
+orcid
+indicators
+evidence
+Affiliation
+id
+organizations[]
+address_parts[]
+city
+state
+postal_code
+country_text
+country_code
+source_text
+evidence
+Reference
+seq
+source_text
+page_start
+page_end
+original_label
+split_from
+evidence
+
+29. RECOMMENDED TECHNOLOGY
+Prefer a local-first application so production processing does not incur AI/API costs.
+Suggested architecture:
+Frontend:
+React / Next.js + TypeScript
+Backend:
+Node.js/TypeScript or Python service where PDF libraries are stronger
+Local processing components may use:
+PyMuPDF / MuPDF
+pdfplumber
+pypdf
+Tesseract OCR where OCR is actually needed
+BeautifulSoup/lxml for HTML
+lxml or equivalent XML parser
+deterministic regex/parser libraries
+Database:
+SQLite for standalone/local deployment
+or PostgreSQL if multi-user/server deployment is required.
+Use local filesystem storage for article packages where appropriate.
+Do NOT require cloud AI services.
+
+30. TESTING FRAMEWORK
+The supplied examples are GOLDEN TEST CASES.
+For every approved example package create tests asserting:
+ID/version
+title
+abstract
+keywords
+authors
+sequence
+names
+emails
+ORCID
+affiliations
+grouping
+correspondence
+reference count
+reference content
+final XML structure
+Use expected XML fixtures.
+Compare generated XML semantically rather than relying only on byte-for-byte formatting.
+Create regression tests whenever a rule bug is corrected.
+
+31. RULE LEARNING — WITHOUT AI
+Do not allow the runtime to "learn" unpredictably.
+When a reviewer corrects something:
+record correction
+identify which rule failed
+administrator can create/update deterministic rule
+add corrected article as regression fixture
+rerun tests
+The system becomes better through RULE UPDATES and TEST CASES, not machine-learning inference.
+
+32. SOURCE TRACEABILITY
+This is mandatory.
+Clicking any final metadata value should show exactly where it came from.
+Example:
+AUTHOR:
+Marta Lazzaretti
+SOURCE:
+PDF
+PAGE:
+1
+EVIDENCE:
+"Marta Lazzaretti 1,2*"
+VERIFIED AGAINST:
+API XML
+RULE:
+AUTHOR-004
+For PDF fields, clicking evidence should navigate to and highlight the PDF region.
+
+33. REFERENCE TRACEABILITY
+For every generated XML reference show:
+XML Reference #37
+↓
+PDF Page 12
+↓
+Original PDF reference label [37]
+↓
+Extracted source text
+If one numbered PDF entry becomes multiple XML references, show that relationship.
+
+34. CONFIDENCE WITHOUT AI
+Do not use fake AI confidence scores.
+Use deterministic confidence/status categories:
+EXACT
+NORMALIZED_EXACT
+RULE_RESOLVED
+AMBIGUOUS
+MISSING
+HOLD
+A field should be automatically accepted only when the applicable deterministic rule resolves it.
+
+35. IMPORTANT PROHIBITIONS
+NEVER:
+hallucinate metadata
+search the internet to complete missing citation data
+invent affiliations
+invent countries except transformations explicitly allowed by project rules
+invent email addresses
+invent ORCIDs
+silently reorder authors
+silently discard references
+silently choose between mismatched source documents
+silently use an AI API
+truncate reference extraction
+treat Markdown as authoritative for layout-sensitive information
+When uncertain:
+HOLD FOR REVIEW.
+
+36. DEVELOPMENT MODE VS PRODUCTION MODE
+Create an explicit application setting:
+PROCESSING ENGINE:
+DETERMINISTIC RULE ENGINE
+Production builds should not contain an AI API key field.
+Add a diagnostic page showing:
+AI CALLS THIS SESSION: 0
+EXTERNAL LLM CALLS: 0
+PROCESSING ENGINE: LOCAL RULE ENGINE
+This provides evidence that citation processing does not consume AI credits.
+
+37. INITIAL IMPLEMENTATION PRIORITY
+Build in this order:
+PHASE 1
+Upload/package matching + document viewers.
+PHASE 2
+PDF coordinate extraction + normalized text/MD.
+PHASE 3
+ID/title/abstract/keywords/authors.
+PHASE 4
+API/HTML/Scrapping cross-validation.
+PHASE 5
+Affiliation and author-group engine.
+PHASE 6
+Email/ORCID/correspondence.
+PHASE 7
+Reference extraction and splitting.
+PHASE 8
+XML generator.
+PHASE 9
+Rule/HOLD engine.
+PHASE 10
+Human metadata/XML editors.
+PHASE 11
+Validation/audit system.
+PHASE 12
+Batch processing and regression testing.
+
+38. DO NOT START BY WRITING THE ENTIRE APP
+First analyze ALL supplied:
+rules
+approved XML examples
+source PDFs
+API XML files
+Scrapping XML files
+HTML files
+expected XML outputs
+Then produce:
+exact input/output architecture
+metadata source-authority matrix
+complete rule catalogue
+XML schema/template map
+internal data model
+PDF extraction strategy
+reference segmentation algorithm
+author-affiliation grouping algorithm
+HOLD/flag catalogue
+application screen map
+test plan
+proposed project folder structure
+After presenting these, begin implementation.
+Most importantly:
+THE EXPECTED XML EXAMPLES AND PROJECT RULES ARE THE SPECIFICATION.
+Do not "improve" or reinterpret their structure based on generic citation standards.
+Where an example conflicts with a written rule, identify the conflict and flag it for confirmation rather than silently choosing one.
+The final objective is:
+PDF + SUPPORT DOCS
+→ deterministic extraction
+→ deterministic rule engine
+→ cross-source verification
+→ human review where required
+→ exact Elsevier-compatible XML
+→ zero AI calls during production citation processing.
+39. HOLD OVERRIDE, FULL XML EDITING & FORCED GENERATION
+The application MUST allow the operator to generate, edit, validate, override, and export XML even when the article contains HOLD items.
+A HOLD is a warning/review state. It must NOT permanently prevent XML generation.
+XML GENERATION WHILE ON HOLD
+When extraction and rule processing are complete, generate the FULL XML using all metadata that has been successfully extracted.
+If one or more fields are on HOLD:
+still generate the complete XML preview
+clearly identify the metadata/XML elements affected by the HOLD
+highlight unresolved fields
+show the HOLD reason
+show the rule that created the HOLD
+allow the operator to manually correct the affected data
+allow the operator to override the HOLD
+allow XML regeneration after correction/override
+The user must never be forced to restart processing simply because a HOLD occurred.
+
+HOLD MANAGEMENT
+Each HOLD must provide these actions:
+EDIT DATA
+Edit the extracted metadata responsible for the HOLD.
+VIEW EVIDENCE
+Open the exact PDF/support-document evidence that caused the HOLD.
+ACCEPT EXTRACTED VALUE
+Accept the system's existing value despite the warning.
+OVERRIDE HOLD
+Allow an authorized user to manually clear/override the HOLD.
+KEEP HOLD
+Leave the warning unresolved while continuing to inspect the article/XML.
+After an override, record:
+original HOLD reason
+rule ID
+original extracted value
+final accepted/edited value
+user action
+timestamp
+optional override reason
+Never delete the original HOLD information from the audit trail.
+
+40. FULL XML MUST ALWAYS BE EDITABLE
+Once XML has been generated, the ENTIRE XML document must be available in an integrated XML editor.
+Do NOT limit editing to metadata form fields.
+The operator must be able to manually edit any permitted XML content.
+The XML editor must provide:
+full XML document
+syntax highlighting
+line numbers
+search
+find/replace
+formatting/pretty print
+XML validation
+error highlighting
+line/column error navigation
+undo/redo
+copy
+direct manual editing
+save edited XML
+download/export XML
+Example:
+If validation reports:
+Line 92, Column 209
+the editor must automatically navigate to and highlight that location.
+
+41. TWO EDITING LEVELS
+The application must support TWO separate editing methods.
+LEVEL 1 — STRUCTURED METADATA EDITOR
+Allow editing:
+arXiv ID/version
+title
+abstract
+keywords
+authors
+initials
+given names
+surnames
+emails
+ORCIDs
+affiliations
+organization
+address
+city
+state
+postal code
+country
+correspondence
+references
+author-affiliation relationships
+After these edits:
+REGENERATE XML
+rebuilds the XML from the corrected structured metadata.
+
+LEVEL 2 — DIRECT XML EDITOR
+Allow the operator to edit the generated XML itself.
+For example:
+Generated XML
+→ manually change an element
+→ validate
+→ save
+→ export
+Once direct XML editing occurs, mark the XML:
+MANUALLY MODIFIED
+Do NOT automatically overwrite those changes.
+If the operator later selects:
+REGENERATE FROM METADATA
+display a warning:
+"Regenerating XML will replace direct XML modifications. Continue?"
+Only regenerate after confirmation.
+
+42. HOLD → EDIT → REGENERATE WORKFLOW
+Required workflow:
+PROCESS DOCUMENT
+↓
+RULE ENGINE DETECTS HOLD
+↓
+FULL XML STILL GENERATED
+↓
+HOLD ELEMENT HIGHLIGHTED
+↓
+USER REVIEWS PDF / SUPPORT DOCUMENTS
+↓
+USER EDITS METADATA
+OR
+USER OVERRIDES HOLD
+↓
+RE-RUN AFFECTED RULES
+↓
+REGENERATE XML
+↓
+VALIDATE
+↓
+EXPORT
+Example:
+TITLE-001 — HOLD
+PDF:
+"Example Article Title"
+HTML:
+"Example Article Titles"
+The user can:
+inspect both sources
+edit the final title
+choose the accepted value
+enter an override reason if required
+clear/override HOLD
+regenerate XML
+validate
+export
+
+43. FORCE GENERATE / FORCE EXPORT
+Provide authorized users with:
+GENERATE XML WITH HOLDS
+and, if business workflow permits:
+EXPORT XML WITH HOLDS
+Before export, display:
+"3 unresolved HOLD items remain."
+Show each HOLD.
+The user can then:
+return to review
+edit the issue
+override individual HOLDs
+continue with authorized export
+Do NOT silently remove HOLD warnings simply to make the article appear completed.
+
+44. XML ↔ METADATA CONNECTION
+Where practical, connect XML elements back to structured metadata.
+Example:
+Click:
+<ce:surname>Lazzaretti</ce:surname>
+The application should identify:
+Author 1
+Surname
+Source: PDF/API verification
+Rule: AUTHOR-xxx
+Similarly:
+Clicking a reference in the XML should allow navigation to the corresponding PDF reference.
+This provides:
+PDF
+↔ Extracted Metadata
+↔ Rule Decision
+↔ Generated XML
+traceability.
+
+45. ARTICLE STATUS MODEL
+Use separate processing statuses instead of treating HOLD as a fatal error.
+Suggested statuses:
+UPLOADED
+EXTRACTING
+EXTRACTED
+REVIEW REQUIRED
+ON HOLD
+MANUALLY EDITED
+HOLD OVERRIDDEN
+XML GENERATED
+XML MANUALLY MODIFIED
+VALIDATION FAILED
+VALIDATED
+READY FOR EXPORT
+EXPORTED
+A document can therefore be:
+XML GENERATED + ON HOLD
+or:
+XML GENERATED + HOLD OVERRIDDEN
+A HOLD must not automatically mean that XML generation failed.
+
+46. CRITICAL PRINCIPLE
+The rule engine ASSISTS and CONTROLS automated processing, but the authorized human operator retains final control.
+Therefore:
+RULE ENGINE
+→ detects problems
+HOLD
+→ warns the operator
+HUMAN REVIEW
+→ resolves/overrides problems
+XML GENERATOR
+→ remains available
+XML EDITOR
+→ allows final correction
+VALIDATOR
+→ checks technical correctness
+AUDIT LOG
+→ records what happened
+The system must NEVER trap an article because a deterministic rule produced a HOLD.
+The goal is controlled human override with complete traceability — not an inflexible automated pipeline.
+

@@ -1,0 +1,180 @@
+# ICE routing rulebook
+#
+# An article goes to the IRREGULAR queue when any rule below that is turned on
+# finds something. When nothing is found it goes to the REGULAR (General) queue.
+#
+# How to edit (Notepad is fine; save as UTF-8):
+#   on = true / false   turns a rule on or off.
+#   text = "..."        is the reason shown on the article when the rule fires.
+#   group = "..."       is the heading the rule is listed under in the app.
+#   Word lists such as honorifics = ["Dr", "Prof"] can be extended or trimmed.
+#
+# ICE reads this file before it routes each article, so a change applies to the
+# next upload straight away. To apply it to articles already in the queues, open
+# "Rules & guidance" in the app and choose "Re-check queues".
+#
+# The rule names in [brackets] are fixed: each one is a check built into ICE.
+# You can switch it and tune its words here, but a new kind of check needs a
+# developer to add it once. A misspelt rule name or setting is reported as an
+# error and every article goes to Irregular until it is fixed, so a typo never
+# lets an article through unchecked.
+#
+# Four safety checks always apply and are not listed here: a missing or
+# unreadable PDF/API/Scrapping/HTML file, generated XML that fails validation,
+# hand-edited XML, and an error in this file.
+
+
+# ---------------------------------------------------------------------------
+# ID AND VERSION
+
+[id_missing]
+on = true
+group = "ID and version"
+text = "The PDF is missing its article ID."
+
+[id_version_mismatch]
+on = true
+group = "ID and version"
+text = "The PDF's ID and/or version does not match the HTML and/or Scrapping source."
+# Sources to compare with: "SCRAPPING", "HTML", "API".
+# The HTML version is only compared when the HTML page shows a single version.
+compare_with = ["SCRAPPING", "HTML"]
+
+
+# ---------------------------------------------------------------------------
+# TITLE
+
+[title_mismatch]
+on = true
+group = "Title"
+text = "The PDF title does not match the HTML title (content only; case and formatting are not considered)."
+# Only letters and digits are compared, so case, accents, punctuation, dashes,
+# spacing and markup make no difference.
+compare_with = ["HTML"]
+
+
+# ---------------------------------------------------------------------------
+# ABSTRACT
+
+[abstract_missing]
+on = true
+group = "Abstract"
+text = "No clear abstract can be seen."
+# true: an abstract without a printed "Abstract" heading also counts as unclear.
+# Many physics papers print the abstract as an indented block with no heading.
+require_heading = false
+
+[abstract_is_pitch]
+on = true
+group = "Abstract"
+text = "When there is no clear abstract, an elevator pitch or teaser is not the abstract."
+# Section headings that are never the abstract, searched on the first pages.
+headings = ["Elevator pitch", "Teaser"]
+pages = 2
+
+
+# ---------------------------------------------------------------------------
+# AUTHORS
+
+[author_mismatch]
+on = true
+group = "Authors"
+text = "The PDF authors do not match the API authors by content (capitalization and formatting are ignored)."
+# false: "J. Smith" in the PDF and "John Smith" in the API count as different.
+initials_match_full_names = false
+
+[author_affiliation_unlinked]
+on = true
+group = "Authors"
+text = "Authors cannot be reliably linked to affiliations using the printed indicators. Authors are not linked just because an affiliation appears below or near their names."
+# true: a single author with a single unmarked affiliation is accepted.
+allow_single_author_single_affiliation = true
+
+[author_name_extras]
+on = true
+group = "Authors"
+text = "An API or PDF author has an alternate name, nickname (alias), suffix, degree or honorific."
+# Honorifics are looked for before the name; suffixes and degrees after it.
+# Dots and case are ignored, so "Ph.D." matches "PhD".
+honorifics = ["Dr", "Prof", "Professor", "Mr", "Mrs", "Ms", "Miss", "Sir", "Dame", "Rev", "Revd"]
+suffixes = ["Jr", "Jnr", "Sr", "Snr", "II", "III", "IV"]
+degrees = ["PhD", "DPhil", "MD", "MSc", "BSc", "MBA", "MPhil", "DSc", "MPH", "FRS", "FRSE", "FRCP", "FACS", "PharmD"]
+# Names in brackets or quotes, like Robert (Bob) Smith, always count as an alias.
+alias_words = ["aka", "a.k.a.", "née", "nee", "also known as"]
+
+
+# ---------------------------------------------------------------------------
+# REFERENCES
+
+[references_two_locations]
+on = true
+group = "References"
+text = "References appear in two or more locations."
+
+[references_missing]
+on = true
+group = "References"
+text = "No references in the PDF."
+
+[references_incomplete]
+on = true
+group = "References"
+text = "The PDF has incomplete references."
+# An entry shorter than this many characters, or ending in , ; : ... or a bare
+# doi:/arXiv:, counts as incomplete. Gaps in the printed numbering also count.
+min_length = 20
+
+[references_multiple]
+on = true
+group = "References"
+text = "The PDF has multiple references in one entry."
+
+[reference_hyperlinks]
+on = true
+group = "References"
+text = "A reference has hyperlinks."
+# true: printed web and DOI addresses count as well as clickable links.
+include_printed_addresses = true
+
+
+# ---------------------------------------------------------------------------
+# CORRESPONDING
+
+[correspondence_address]
+on = true
+group = "Correspondence"
+text = "Address corresponding situation: the PDF prints a separate correspondence address."
+# A line starting with one of these phrases fires the rule when it (or the line
+# under it) holds an address: an organization, street, country or postcode.
+# An email address alone does not count.
+phrases = ["Address correspondence to", "Correspondence address", "Corresponding address", "Correspondence to", "Corresponding author", "Reprint requests to", "All correspondence to", "Contact address"]
+pages = 2
+
+
+# ---------------------------------------------------------------------------
+# AFFILIATIONS
+
+[affiliation_outside_front]
+on = true
+group = "Affiliations"
+text = "Affiliations found in the middle of the paper or in a biography."
+# Affiliation-like blocks past page 1 count unless an operator dismissed them.
+biography_headings = ["Biography", "Biographies", "About the author", "About the authors", "Author biographies", "Author biography"]
+
+[affiliation_non_english]
+on = true
+group = "Affiliations"
+text = "Non-English affiliations."
+# Whole words; case is ignored. Add spellings without accents if needed.
+words = ["Universität", "Universitat", "Université", "Universite", "Universidad", "Universidade", "Università", "Universita", "Universiteit", "Universitet", "Uniwersytet", "Univerzita", "Egyetem", "Instituto", "Istituto", "Institut", "Dipartimento", "Departamento", "Département", "Departement", "Facultad", "Faculdade", "Facoltà", "Fakultät", "Fakulta", "Hochschule", "Fachhochschule", "École", "Ecole", "Laboratoire", "Laboratorio", "Laboratório", "Centro de", "Centre de", "Escuela", "Escola", "Politecnico", "Politécnica", "Politecnica", "Technische", "Deutschland", "España", "Brasil", "México", "Italia", "Polska", "Nederland", "Schweiz", "Suisse", "Svizzera", "Österreich", "Sverige", "Norge", "Danmark", "Suomi", "Česká republika", "Slovensko", "Magyarország", "România"]
+# true: affiliations written in a non-Latin script (Chinese, Cyrillic, ...) count.
+non_latin_script = true
+
+
+# ---------------------------------------------------------------------------
+# ORCID
+
+[orcid]
+on = true
+group = "ORCID"
+text = "The article has an ORCID logo, link or number."
