@@ -41,6 +41,147 @@ class AffiliationTest(unittest.TestCase):
         self.assertEqual([g['author_ids'] for g in md['author_groups']], [['author-1'], ['author-2']])
         self.assertEqual(md['affiliations'][0]['evidence'][0]['page'], 1)
 
+    def test_mexican_address_keeps_street_city_region_postal_and_country_distinct(self):
+        source=('Universidad Nacional Autónoma de México, Instituto de Radioastronomía y Astrofísica., '
+                'Antigua Carretera a Pátzcuaro 8701, Ex-Hda. San José de la Huerta, '
+                '58089, Morelia, Michoacán, México')
+        aff=engine.parse_affiliation(source,'1',[])
+        self.assertEqual(aff['organizations'],[
+            'Universidad Nacional Autónoma de México',
+            'Instituto de Radioastronomía y Astrofísica'])
+        self.assertEqual(aff['city'],'Morelia')
+        self.assertEqual(aff['postal_code'],'58089')
+        self.assertEqual(aff['country_code'],'MEX')
+        self.assertEqual(aff['state'],'')
+        self.assertIn('Antigua Carretera a Pátzcuaro 8701',aff['address_parts'])
+        self.assertIn('Ex-Hda. San José de la Huerta',aff['address_parts'])
+        self.assertIn('Michoacán',aff['address_parts'])
+
+    def test_full_us_state_names_serialize_as_two_letter_codes(self):
+        aff=engine.parse_affiliation(
+            'Example University, Boulder, Colorado 80301, USA','1',[])
+        self.assertEqual((aff['city'],aff['state'],aff['postal_code']),
+                         ('Boulder','CO','80301'))
+
+    def test_university_name_is_not_country_and_macau_sar_uses_autonomous_code(self):
+        aff=engine.parse_affiliation(
+            'SKL-IOTSC, Department of CIS, University of Macau, Macau SAR, China',
+            '1',[])
+        self.assertEqual(aff['country_code'],'MAC')
+        self.assertEqual(aff['city'],'Macau')
+        self.assertIn('University of Macau',aff['organizations'])
+        self.assertIsNone(engine.COUNTRY_END.search('University of Macau'))
+        university_only=engine.parse_affiliation('University of Macau','1',[])
+        self.assertEqual(university_only['country_code'],'')
+
+    def test_affiliation_and_email_in_author_footnote_are_both_captured(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Ada Lovelace*',12),
+            (225,'Abstract',11),(240,'A sufficiently long abstract paragraph for the example.',10),
+            (690,'*Department of Computer Science and Engineering, UC San Diego. ada@example.org',9),
+        ],[{'given_name':'Ada','surname':'Lovelace'}])
+        self.assertEqual(len(md['affiliations']),1)
+        self.assertIn('Department of Computer Science and Engineering',md['affiliations'][0]['source_text'])
+        self.assertIn('UC San Diego',md['affiliations'][0]['organizations'])
+        self.assertEqual(md['authors'][0]['email'],'ada@example.org')
+        self.assertEqual(md['authors'][0]['affiliation_ids'],[md['affiliations'][0]['id']])
+
+    def test_explicit_abstract_keeps_formula_glyph_lines_until_real_section_heading(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Ada Lovelace',12),(180,'Abstract',11),
+            (195,'We study the model and define a Hamiltonian H = 1',10),
+            (196,'SUM_i J_ij Z_i Z_j',9),
+            (210,'The algorithm then achieves the stated guarantee.',10),
+            (245,'1 Introduction',11),
+            (260,'This is the body of the introduction, not the abstract.',10),
+        ],[{'given_name':'Ada','surname':'Lovelace'}])
+        self.assertIn('SUM_i J_ij Z_i Z_j',md['abstract'])
+        self.assertIn('stated guarantee',md['abstract'])
+        self.assertNotIn('body of the introduction',md['abstract'])
+
+    def test_complex_hamiltonian_in_abstract_uses_supplied_formula_placeholder(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Ada Lovelace',12),(180,'Abstract',11),
+            (200,'We study the model defined by the Hamiltonian H = 1/2 sum_i,j J_ij Z_i Z_j + sum_i h_i Z_i where J is symmetric.',10),
+            (245,'1 Introduction',11),
+        ],[{'given_name':'Ada','surname':'Lovelace'}])
+        self.assertIn('Hamiltonian (Formula presented) where J is',md['abstract'])
+
+    def test_two_column_abstract_skips_publisher_notice_and_reads_continuation(self):
+        with tempfile.TemporaryDirectory() as folder:
+            pdf=Path(folder)/'article.pdf';doc=fitz.open();page=doc.new_page(width=600,height=800)
+            for x,y,text,size in [
+                (50,75,'An article title',16),(50,102,'Ada Lovelace',12),
+                (50,150,'Abstract',11),(50,170,'The first column explains the problem and the approach.',10),
+                (50,190,'The final left-column words end with relative transitions',10),
+                (50,740,'Permission to make digital or hard copies of this work.',7),
+                (320,170,'contain less city-specific information and improve transfer.',10),
+                (320,190,'These findings complete the abstract.',10),(320,220,'CCS Concepts',10),
+                (320,240,'Keywords',10),(50,280,'1 Introduction',11),
+                (50,300,'This paragraph belongs to the article body.',10)]:
+                page.insert_text((x,y),text,fontsize=size)
+            doc.save(pdf);doc.close();layout,_=engine.extract_layout(pdf,{})
+            md,_=engine.extract_metadata(layout,{'api_authors':[{'given_name':'Ada','surname':'Lovelace'}]}, {})
+        self.assertIn('relative transitions',md['abstract'])
+        self.assertIn('contain less city-specific information',md['abstract'])
+        self.assertNotIn('Permission to make',md['abstract'])
+        self.assertNotIn('CCS Concepts',md['abstract'])
+        self.assertNotIn('article body',md['abstract'])
+
+    def test_title_rules_choose_complete_form_and_html_when_content_is_different(self):
+        pdf='The main ingredient - clean water, air.'
+        summary='The main $_ingredient_$ - - clean water, air.'
+        self.assertEqual(engine.choose_title(pdf,summary),
+                         ('The main ingredient - - clean water, air.','HTML'))
+        self.assertEqual(engine.choose_title('Preprint: Same scientific title*','Same scientific title'),
+                         ('Same scientific title','PDF'))
+        self.assertEqual(engine.choose_title('A study about quantum systems','Completely unrelated title'),
+                         ('Completely unrelated title','HTML'))
+
+    def test_reference_cleanup_removes_only_linked_internal_page_locators(self):
+        line={'text':'[4] A. Author, A reference title, 2024. 2, 3',
+              'internal_linked_words':['2','3']}
+        self.assertEqual(engine.reference_line_text(line),
+                         '[4] A. Author, A reference title, 2024.')
+        external={'text':'[4] A. Author, https://example.org/paper, 2024. 2'}
+        self.assertEqual(engine.reference_line_text(external),external['text'])
+
+    def test_alias_and_api_suffix_are_preserved_as_author_tags(self):
+        given,alias=engine.split_author_alias('Christopher (Xiang)')
+        self.assertEqual((given,alias),('Christopher','Xiang'))
+        md={'base_id':'2408.00001','version':1,'title':'Sample','abstract':'Text',
+            'authors':[{'id':'a1','global_seq':1,'given_name':given,'surname':'Lee',
+                        'initials':'C.','alias':alias,'suffix':'Jr.'}],
+            'affiliations':[],'references':[],'profile':{}}
+        root=engine.secure_xml(engine.build_xml(md).encode())
+        author=root.xpath('.//*[local-name()="author"]')[0]
+        self.assertEqual(author.xpath('string(*[local-name()="alias"])'),'Xiang')
+        self.assertEqual(author.xpath('string(*[local-name()="suffix"])'),'Jr.')
+
+    def test_surname_attached_superscript_markers_do_not_hide_pdf_author(self):
+        match=engine.author_surname_pattern('Mu').search('Tianwei Mua,b,c')
+        self.assertIsNotNone(match)
+        self.assertEqual(engine.author_markers('a,b,c'),['a','b','c'])
+
+    def test_adjacent_affiliation_and_correspondence_markers_do_not_hide_author(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Courtney L. Crawford1★',12),
+            (145,'1 Department of Astronomy, Example University, Sydney, Australia',9),
+            (225,'Abstract',11),(240,'A sufficiently long abstract sentence for a marker test.',10),
+        ],[{'given_name':'Courtney L.','surname':'Crawford'}])
+        self.assertEqual(len(md['authors']),1)
+        self.assertEqual(md['authors'][0]['markers'],['1','*'])
+
+    def test_collective_pdf_author_is_preserved_when_api_lists_people(self):
+        md=self.pdf_metadata([
+            (75,'UniWAM: Unified World-Action Model',16),(102,'UniWAM Team',12),
+            (135,'Abstract',11),(150,'A sufficiently long abstract paragraph is included for this test.',10),
+        ],[{'given_name':'Wenxuan','surname':'Song'}])
+        self.assertEqual(len(md['authors']),1)
+        self.assertEqual(md['authors'][0]['surname'],'UniWAM Team')
+        self.assertTrue(md['authors'][0]['collective_author'])
+        self.assertTrue(md['author_candidates'])
+
     def test_affiliation_after_last_reference_is_a_candidate_not_part_of_reference(self):
         with tempfile.TemporaryDirectory() as folder:
             pdf=Path(folder)/'article.pdf';doc=fitz.open()
@@ -95,6 +236,18 @@ class AffiliationTest(unittest.TestCase):
         self.assertEqual(len(md['affiliations']), 1)
         self.assertEqual(md['authors'][0]['affiliation_ids'], [md['affiliations'][0]['id']])
         self.assertEqual(md['author_groups'][0]['author_ids'], ['author-1'])
+
+    def test_city_only_affiliation_is_captured_and_shared_by_authors(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Fangqi Dong and Alex Lombardi',12),
+            (140,'Princeton',9),(225,'Abstract',11),
+            (240,'A sufficiently long abstract paragraph for the city-only affiliation test.',10),
+        ],[{'given_name':'Fangqi','surname':'Dong'},
+           {'given_name':'Alex','surname':'Lombardi'}])
+        self.assertEqual(len(md['affiliations']),1)
+        self.assertEqual(md['affiliations'][0]['city'],'Princeton')
+        self.assertEqual([a['affiliation_ids'] for a in md['authors']],
+                         [[md['affiliations'][0]['id']],[md['affiliations'][0]['id']]])
 
     def test_repeated_surname_uses_given_name_and_skips_email(self):
         md = self.pdf_metadata([
@@ -180,6 +333,17 @@ class AffiliationTest(unittest.TestCase):
         self.assertEqual(md['keywords'],['Physics','mathematics'])
         self.assertEqual(len(md['field_evidence']['keywords']),2)
         self.assertNotIn('KEY-001',[i['rule_id'] for i in issues])
+
+    def test_author_keywords_after_abstract_win_and_index_terms_are_ignored(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Ada Lovelace1',12),
+            (145,'1 Department of Mathematics, Paris, France',9),
+            (180,'Keywords: older, list',9),(210,'Abstract',11),
+            (225,'This article has a sufficiently long abstract paragraph for testing keywords.',10),
+            (270,'Index Terms: ignored, list',9),
+            (300,'Keywords: physics; mathematics. systems,',9),
+        ],[{'given_name':'Ada','surname':'Lovelace'}])
+        self.assertEqual(md['keywords'],['physics','mathematics','systems'])
 
     def test_author_footnotes_are_not_unheaded_abstract(self):
         md=self.pdf_metadata([

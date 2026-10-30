@@ -48,7 +48,7 @@ class AppTest(unittest.TestCase):
         for j in self.jobs:
             fired={c['rule'] for c in j['triage']['checks'] if c['status']=='REVIEW'}
             self.assertEqual(fired,expected[j['article_id']],j['triage']['reasons'])
-            self.assertEqual(j['triage']['queue'],'NEEDS_REVIEW')
+            self.assertEqual(j['triage']['queue'],'REGULAR')
         text=app.rulebook.DEFAULT_PATH.read_text(encoding='utf-8')
         for key in ('author_mismatch','reference_hyperlinks','affiliation_non_english'):
             text=text.replace(f'[{key}]\non = true',f'[{key}]\non = false')
@@ -57,11 +57,12 @@ class AppTest(unittest.TestCase):
             try:
                 os.environ['ICE_RULEBOOK']=str(edited)
                 result=self.call('/api/recheck',{})
-                self.assertEqual((result['checked'],result['changed'],result['errors']),(3,3,[]))
+                self.assertEqual((result['checked'],result['changed'],result['failures']),(3,0,[]))
+                self.assertEqual(result['rulebook_errors'],[])
                 for j in self.jobs:
                     after=self.call('/api/jobs/'+j['id'])
                     self.assertEqual(after['triage']['queue'],'REGULAR',after['triage']['reasons'])
-                    self.assertEqual(after['audit'][-1]['action'],'RULEBOOK_RECHECK')
+                    self.assertEqual(after['audit'][-1]['action'],'MATCH_RECHECK_AND_XML')
             finally:
                 del os.environ['ICE_RULEBOOK']
                 self.call('/api/recheck',{})
@@ -84,15 +85,16 @@ class AppTest(unittest.TestCase):
         self.assertEqual(self.call(prefix+'/routing-file')['queue'],j['triage']['queue'])
         self.assertIn(b'Support-document feeder',self.call(prefix+'/feeder-markdown',raw=True))
     def test_3_manual_edit_preserved_and_export(self):
-        j=self.jobs[0];path='/api/jobs/'+j['id'];manual=j['xml'].replace('srcid="???"','srcid="TEST"')
+        j=self.call('/api/jobs/'+self.jobs[0]['id']);path='/api/jobs/'+j['id'];manual=j['xml'].replace('srcid="???"','srcid="TEST"')
         j=self.call(path,{'action':'xml','xml':manual,'revision':j['revision']})
         m=j['metadata'];m['title']+=' Test correction'
         j=self.call(path,{'action':'metadata','metadata':m,'revision':j['revision']})
         self.assertEqual(j['xml'],manual);self.assertTrue(j['xml_stale'])
-        with self.assertRaises(urllib.error.HTTPError):self.call(path,{'action':'export','format':'zip'})
-        data=self.call(path,{'action':'export','format':'zip','force':True},raw=True)
+        data=self.call(path,{'action':'export','format':'zip'},raw=True)
         with zipfile.ZipFile(io.BytesIO(data)) as z:
             self.assertTrue(any(n.endswith('_audit.json') for n in z.namelist()))
+            xml_name=next(n for n in z.namelist() if n.endswith('.xml'))
+            self.assertIn('srcid="TEST"',z.read(xml_name).decode('utf-8'))
         with self.assertRaises(urllib.error.HTTPError):self.call(path,{'action':'generate'})
         restored=self.call(path,{'action':'generate','confirmed':True})
         self.assertIn('Test correction',restored['xml'])
@@ -101,7 +103,6 @@ class AppTest(unittest.TestCase):
         result=self.call(path,{'action':'validate','xml':'<units><bad></units>'})
         self.assertFalse(result['well_formed']);self.assertGreater(result['errors'][0]['column'],0)
         self.call(path,{'action':'xml','xml':'<broken'})
-        with self.assertRaises(urllib.error.HTTPError):self.call(path,{'action':'export','force':True})
         self.assertEqual(self.call(path,{'action':'export','format':'xml','draft':True},raw=True),b'<broken')
     def test_5_synthetic_82_references(self):
         lines=[{'id':str(i),'page':1,'text':f'[{i}] Author A. Sample work {i}. Journal 2024.','bbox':[30,50+i,400,60+i],'direction':[1,0],'block':i,'size':10,'bold':False,'spans':[]} for i in range(1,83)]
@@ -130,26 +131,18 @@ class AppTest(unittest.TestCase):
         self.assertEqual(len(author),2)
         self.assertEqual(len(parsed.xpath('//*[local-name()="titletext"]/*[local-name()="sup"]')),1)
         self.assertEqual(len(parsed.xpath('//*[local-name()="ref-fulltext"]/*[local-name()="inf"]')),1)
-        updated=self.call(path,{'action':'workflow','state':'REVIEW_LATER','note':'Check formula','revision':updated['revision']})
-        self.assertEqual(self.call('/api/jobs')[0]['workflow_state'],'REVIEW_LATER')
+        self.assertEqual(updated['triage']['queue'],'REGULAR')
         data=self.call('/api/export-batch',{'job_ids':[j['id']],'include_sources':True},raw=True)
         with zipfile.ZipFile(io.BytesIO(data)) as z:
             self.assertIsNone(z.testzip());self.assertTrue(any(n.endswith('.xml') for n in z.namelist()))
             self.assertTrue(any('/sources/' in n for n in z.namelist()))
         cleared=self.call('/api/clear',{'job_ids':[j['id']]})
         self.assertEqual(cleared['removed'],[j['id']]);self.assertNotIn(j['id'],[v['id'] for v in self.call('/api/jobs')])
-    def test_7_queue_transfer_is_logged_and_automatic_result_remains_available(self):
-        j=self.call('/api/jobs/'+self.jobs[0]['id']);path='/api/jobs/'+j['id']
-        moved=self.call(path,{'action':'queue','queue':'NEEDS_REVIEW','note':'Requested manual review','revision':j['revision']})
-        self.assertEqual(moved['triage']['queue'],'NEEDS_REVIEW')
-        self.assertEqual(moved['triage']['queue_override']['note'],'Requested manual review')
-        self.assertEqual(moved['audit'][-1]['action'],'QUEUE_TRANSFER')
-        summary=next(x for x in self.call('/api/jobs') if x['id']==j['id'])
-        self.assertEqual(summary['queue'],'NEEDS_REVIEW')
-        self.assertEqual(summary['automatic_queue'],moved['triage']['automatic_queue'])
-        reset=self.call(path,{'action':'queue','queue':'AUTO','revision':moved['revision']})
-        self.assertIsNone(reset['triage']['queue_override'])
-        self.assertEqual(reset['triage']['queue'],reset['triage']['automatic_queue'])
+    def test_7_review_findings_never_block_or_move_xml_out_of_general(self):
+        j=self.call('/api/jobs/'+self.jobs[0]['id'])
+        self.assertEqual(j['triage']['queue'],'REGULAR')
+        self.assertTrue(j['triage']['reasons'])
+        self.assertEqual(j['validation']['profile_valid'],True)
     @classmethod
     def tearDownClass(cls):
         cls.server.shutdown();cls.server.server_close();app.POOL.shutdown(wait=True);TEMP.cleanup()

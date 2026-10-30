@@ -1,4 +1,4 @@
-"""The rulebook and the safety checks decide the queue; other HOLDs do not."""
+"""Rulebook and safety findings remain review notes; they never block XML."""
 import sys, tempfile, unittest
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -47,28 +47,28 @@ class TriageTest(unittest.TestCase):
             self.assertEqual(self.assess(j)['queue'],'REGULAR',html)
         j=self.clean_job();j['metadata']['title']='Different title'
         result=self.assess(j)
-        self.assertEqual(result['queue'],'NEEDS_REVIEW')
+        self.assertEqual(result['queue'],'REGULAR')
         self.assertTrue(any(r.startswith('The PDF title does not match') for r in result['reasons']))
         self.assertEqual(next(c for c in result['checks'] if c['rule']=='title_mismatch')['status'],'REVIEW')
 
     def test_version_mismatch_routes_to_review(self):
         j=self.clean_job();j['metadata']['source_values']['scrapping_version']=2
         result=self.assess(j)
-        self.assertEqual(result['queue'],'NEEDS_REVIEW')
+        self.assertEqual(result['queue'],'REGULAR')
         self.assertTrue(any('version 1 but Scrapping version 2' in r for r in result['reasons']))
 
     def test_safety_checks_always_apply(self):
         j=self.clean_job();j['selected'].pop('HTML')
         self.assertIn('HTML file is missing.',self.assess(j)['reasons'])
         j=self.clean_job();j['manual_xml']=True
-        self.assertEqual(self.assess(j)['queue'],'NEEDS_REVIEW')
+        self.assertEqual(self.assess(j)['queue'],'REGULAR')
         j=self.clean_job();j['validation']['profile_valid']=False
-        self.assertEqual(self.assess(j)['queue'],'NEEDS_REVIEW')
+        self.assertEqual(self.assess(j)['queue'],'REGULAR')
         j=self.clean_job();j['extraction_issues']=[engine.issue('PKG-002','API','Cannot read API: DTD/entity declarations are not accepted.')]
-        self.assertEqual(self.assess(j)['queue'],'NEEDS_REVIEW')
+        self.assertEqual(self.assess(j)['queue'],'REGULAR')
         off=book_with(**{r['key']:False for r in rulebook.load()['rules']})
         j=self.clean_job();j['selected'].pop('API')
-        self.assertEqual(self.assess(j,off)['queue'],'NEEDS_REVIEW')
+        self.assertEqual(self.assess(j,off)['queue'],'REGULAR')
 
     def test_holds_outside_the_rulebook_do_not_choose_the_queue(self):
         j=self.clean_job()
@@ -77,7 +77,7 @@ class TriageTest(unittest.TestCase):
         j['metadata']['affiliations'][0]['component_warnings']=['Postal location was not separated.']
         result=self.assess(j)
         self.assertEqual(result['queue'],'REGULAR',result['reasons'])
-        self.assertEqual(result['review_holds'],2)
+        self.assertNotIn('review_holds',result)
 
     def test_rule_switched_off_does_not_route_and_rulebook_errors_do(self):
         j=self.clean_job();j['metadata']['title']='Different title'
@@ -86,29 +86,29 @@ class TriageTest(unittest.TestCase):
         self.assertNotIn('title_mismatch',[c['rule'] for c in result['checks']])
         broken={**rulebook.load(),'errors':['Unknown rule [titel_mismatch].']}
         result=self.assess(self.clean_job(),broken)
-        self.assertEqual(result['queue'],'NEEDS_REVIEW')
+        self.assertEqual(result['queue'],'REGULAR')
         self.assertIn('Rulebook error: Unknown rule [titel_mismatch].',result['reasons'])
 
     def test_missing_extraction_record_never_passes_pdf_rules(self):
         result=triage.assess(self.clean_job(),None)
-        self.assertEqual(result['queue'],'NEEDS_REVIEW')
+        self.assertEqual(result['queue'],'REGULAR')
         self.assertTrue(any('extraction record is missing' in r for r in result['reasons']))
 
     def test_affiliation_candidate_decision_and_manual_queue_transfer(self):
         j=self.clean_job();candidate={'id':'aff-candidate-1','status':'UNREVIEWED','location':'Page 4 footer','source_text':'Lab, Paris, France'}
         j['metadata']['affiliation_candidates']=[candidate]
-        self.assertEqual(self.assess(j)['queue'],'NEEDS_REVIEW')
+        self.assertEqual(self.assess(j)['queue'],'REGULAR')
         j['metadata']['affiliation_candidates'][0]['status']='DISMISSED'
         self.assertEqual(self.assess(j)['automatic_queue'],'REGULAR')
         j['metadata']['title']='Different title'
         j['queue_override']={'queue':'REGULAR','note':'Reviewed manually'}
         result=self.assess(j)
-        self.assertEqual(result['automatic_queue'],'NEEDS_REVIEW')
+        self.assertEqual(result['automatic_queue'],'REGULAR')
         self.assertEqual(result['queue'],'REGULAR')
 
     def test_not_ready_is_pending(self):
         j=self.clean_job();j['status']='QUEUED'
-        self.assertEqual(self.assess(j)['queue'],'NEEDS_REVIEW')
+        self.assertEqual(self.assess(j)['queue'],'REGULAR')
 
     def test_real_pdf_and_support_files_route_to_regular(self):
         with tempfile.TemporaryDirectory() as temporary:

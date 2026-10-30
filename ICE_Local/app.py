@@ -1,6 +1,6 @@
 """ICE Local browser app. Run with Python, then open the printed localhost URL."""
 from __future__ import annotations
-import argparse, copy, csv, io, json, mimetypes, os, re, secrets, shutil, socket, threading, time
+import argparse, base64, copy, csv, hmac, io, json, mimetypes, os, re, secrets, shutil, socket, threading, time
 import functools, traceback, uuid, webbrowser, zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -186,6 +186,9 @@ def import_batch(batchid):
 
 from collections import defaultdict
 
+class AuthenticationRequired(Exception):
+    pass
+
 class Handler(BaseHTTPRequestHandler):
     server_version='ICE-Local/1.0'
     def log_message(self,*args):pass
@@ -200,8 +203,27 @@ class Handler(BaseHTTPRequestHandler):
         for k,v in (headers or {}).items():self.send_header(k,v)
         self.end_headers();self.wfile.write(data)
     def route(self):
-        host=self.headers.get('Host','').split(':')[0]
-        if host not in ('127.0.0.1','localhost'):raise PermissionError('Localhost access only')
+        raw_host=self.headers.get('Host','')
+        host=(urlparse('//'+raw_host).hostname or '').lower().rstrip('.')
+        bind_host=self.server.server_address[0]
+        local=bind_host in ('127.0.0.1','::1','localhost')
+        if local:
+            if host not in ('127.0.0.1','localhost','::1'):raise PermissionError('Localhost access only')
+        else:
+            allowed={x.strip().lower().rstrip('.') for x in (os.environ.get('ICE_ALLOWED_HOSTS','')+','+os.environ.get('REPLIT_DOMAINS','')+','+os.environ.get('REPLIT_DEV_DOMAIN','')).split(',') if x.strip()}
+            if host not in allowed and not host.endswith(('.replit.app','.replit.dev','.repl.co')):
+                raise PermissionError('This host is not configured for ICE.')
+            password=os.environ.get('ICE_ACCESS_PASSWORD','')
+            auth=self.headers.get('Authorization','')
+            valid=False
+            if password and auth.startswith('Basic '):
+                try:
+                    credentials=base64.b64decode(auth[6:],validate=True).decode('utf-8')
+                    username,provided=credentials.split(':',1)
+                    valid=bool(username) and hmac.compare_digest(provided,password)
+                except (ValueError,UnicodeError):
+                    valid=False
+            if not valid:raise AuthenticationRequired()
         u=urlparse(self.path);return u.path,parse_qs(u.query)
     def redirect(self,location):
         self.send_response(302);self.send_header('Location',location);self.send_header('Content-Length','0');self.send_header('Cache-Control','no-store');self.end_headers()
@@ -251,6 +273,7 @@ class Handler(BaseHTTPRequestHandler):
                 kind={'.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.html':'text/html; charset=utf-8'}.get(file.suffix) or mimetypes.guess_type(str(file))[0] or 'application/octet-stream'
                 return self.send(200,file.read_bytes(),kind)
             self.send(404,{'error':'Not found'})
+        except AuthenticationRequired:self.send(401,{'error':'Sign in with the shared ICE access password.'},headers={'WWW-Authenticate':'Basic realm="ICE shared workspace", charset="UTF-8"'})
         except PermissionError as e:self.send(403,{'error':str(e)})
         except Exception as e:self.send(400,{'error':str(e)})
     def do_POST(self):
@@ -453,6 +476,7 @@ class Handler(BaseHTTPRequestHandler):
                     else:raise ValueError('Unknown action')
                     save_job(j);return self.send(200,j)
             self.send(404,{'error':'Not found'})
+        except AuthenticationRequired:self.send(401,{'error':'Sign in with the shared ICE access password.'},headers={'WWW-Authenticate':'Basic realm="ICE shared workspace", charset="UTF-8"'})
         except PermissionError as e:self.send(403,{'error':str(e)})
         except Exception as e:self.send(400,{'error':str(e)})
 
@@ -465,21 +489,24 @@ def install_network_guard():
     socket.socket.connect=guarded
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--port',type=int,default=8765);parser.add_argument('--no-browser',action='store_true');args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--host',default=os.environ.get('ICE_HOST','127.0.0.1'));parser.add_argument('--port',type=int,default=int(os.environ.get('PORT','8765')));parser.add_argument('--no-browser',action='store_true');args=parser.parse_args()
+    if args.host not in ('127.0.0.1','localhost','::1'):
+        password=os.environ.get('ICE_ACCESS_PASSWORD','')
+        if len(password)<24:raise SystemExit('Public hosting requires ICE_ACCESS_PASSWORD with at least 24 characters. Add it as a Replit deployment secret.')
     install_network_guard()
     # Restore interrupted queue jobs on a clean restart.
     for j in all_jobs():
         if j['status'] in ('QUEUED','PROCESSING'):POOL.submit(process_job,j['id'])
-    try:server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler)
+    try:server=ThreadingHTTPServer((args.host,args.port),Handler)
     except OSError:
         print('Port is already in use. Close the other ICE window or run app.py --port 8766.');raise
-    url=f'http://127.0.0.1:{args.port}'
-    print(f'ICE Local {engine.VERSION}\nOpen {url}\nKeep this window open. Your work is saved in {DATA}\nPress Ctrl+C to stop.',flush=True)
+    url=f'http://127.0.0.1:{args.port}' if args.host in ('127.0.0.1','localhost','::1') else f'Listening on {args.host}:{args.port}'
+    print(f'ICE Local {engine.VERSION}\n{url}\nKeep this process running. Workspace data is stored in {DATA}\nPress Ctrl+C to stop.',flush=True)
     book=rulebook.load()
     print(f"Rulebook: {book['path']} ({sum(r['on'] for r in book['rules'])} of {len(book['rules'])} rules on)",flush=True)
     for e in book['errors']:print('Rulebook error: '+e+' Every article goes to Irregular until this is fixed.',flush=True)
-    print('Sign-in is disabled. The local workspace opens directly.',flush=True)
-    if not args.no_browser:threading.Timer(.8,lambda:webbrowser.open(url)).start()
+    print('Public workspace password protection is active.' if args.host not in ('127.0.0.1','localhost','::1') else 'Local workspace opens directly without sign-in.',flush=True)
+    if not args.no_browser and args.host in ('127.0.0.1','localhost','::1'):threading.Timer(.8,lambda:webbrowser.open(url)).start()
     try:server.serve_forever()
     except KeyboardInterrupt:print('\nStopping ICE Local. Saved articles will be available next time.')
     finally:server.server_close();POOL.shutdown(wait=False,cancel_futures=True)

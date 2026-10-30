@@ -962,3 +962,12 @@ The Exact Parameters of A bch groups - html
 Xi’an Jiaotong University, Faculty of Electronic and Information Engineering, School of AutomationScience and Technology (weichao.liang@xjtu.ed
 
 
+SUPPLEMENTAL CASES FROM THE SECOND ATTACHED RULE DOCUMENT
+
+ID and version comparison: compare the PDF stamp with Scrapping and the current HTML summary. Compare the API base ID as an additional package consistency check. Missing or conflicting values are shown as informational review notes; they never block XML generation or export.
+
+Author identity: retain API author order as comparison evidence. Expand initials only when name components support the same identity. A conflicting middle initial or additional PDF name components remain separate, reviewable candidates; do not silently merge them. Preserve a hyphen in given or family names and capture the first explicit alias without quotes/parentheses. Capture suffix/degree fields only when attached to the author in the source or explicit API value.
+
+Author group sequence: order groups by affiliation appearance and retain each author's global sequence when the author appears in more than one group. Keep an unlinked author visible rather than dropping them.
+
+

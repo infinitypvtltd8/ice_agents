@@ -15,6 +15,10 @@ The repo includes a portable 64-bit Python 3.12.10 runtime with all required lib
 - A modern browser (Edge, Chrome or Firefox)
 - Optional: [Tesseract OCR](https://github.com/tesseract-ocr/tesseract), only for scanned or image-only PDFs
 
+## Replit hosting
+
+The app can also run as a shared Replit Reserved VM deployment. It requires an `ICE_ACCESS_PASSWORD` deployment secret before it will bind to the public network. See [`REPLIT_DEPLOYMENT.md`](REPLIT_DEPLOYMENT.md) for setup, access, and data-retention details. Local Windows/macOS/Linux use remains available as described below.
+
 ### 1. Clone the repository
 
 Clone into a short folder path such as `C:\ICE`:

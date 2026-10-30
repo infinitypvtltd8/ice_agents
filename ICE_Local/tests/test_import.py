@@ -136,7 +136,7 @@ class ImportTest(unittest.TestCase):
         self.assertEqual({j['article_id'] for j in articles},{'2609.12345'})
         self.assertEqual({j['package_name'] for j in articles},{'One.zip','Two.ZIP'})
         self.assertNotEqual(articles[0]['package_id'],articles[1]['package_id'])
-        self.assertTrue(all(len(j['files'])==2 and j['triage']['queue']=='NEEDS_REVIEW' for j in articles))
+        self.assertTrue(all(len(j['files'])==2 and j['triage']['queue']=='REGULAR' for j in articles))
 
     def test_10_fifty_zip_packages_remain_distinct(self):
         files={f'Package_{i:02d}.zip':zip_bytes({'2609.12345.pdf':self.pdf}) for i in range(1,51)}
