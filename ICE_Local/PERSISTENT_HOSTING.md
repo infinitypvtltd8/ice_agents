@@ -13,8 +13,9 @@ storage for eligible accounts. Availability depends on the account's home
 region and VM capacity. Keep the VM, boot volume, and network resources inside
 the Always Free allocations shown in the OCI console; do not upgrade the
 account or create trial-only resources if the requirement is zero charges.
-Oracle signup may require a payment card for identity verification, although
-its signup guide says the card is not charged unless the account is upgraded.
+Oracle signup requires credit or debit card details for identity verification
+for most accounts. Oracle may place a temporary authorization hold; it says
+the card is not charged unless the account is upgraded.
 Oracle also says an Always Free VM may be reclaimed when CPU, network, and
 (for A1) memory utilization all remain below its thresholds over a 7-day
 window. Keep an independent backup of the data volume; this free option does
@@ -82,8 +83,8 @@ app. It does not send PDFs or metadata to an AI service.
 
 ## Operational limits
 
-- Free VM capacity is not guaranteed in every region. OCI may require account
-  verification and a valid card at signup. Check the Always Free labels before
+- Free VM capacity is not guaranteed in every region. OCI signup requires card
+  verification for most accounts. Check the Always Free labels before
   creating resources; the deployment has not been provisioned by this repo.
   Oracle may reclaim Always Free VMs that remain idle by its 7-day criteria, so
   keep a separate backup of saved article data and do not treat this as an SLA.
