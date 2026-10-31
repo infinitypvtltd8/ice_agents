@@ -13,7 +13,7 @@ from pathlib import Path
 import fitz
 from lxml import etree, html
 
-VERSION = '1.4.5'
+VERSION = '1.4.6'
 ANI = 'http://www.elsevier.com/xml/ani/ani'
 CE = 'http://www.elsevier.com/xml/ani/common'
 XML = 'http://www.w3.org/XML/1998/namespace'

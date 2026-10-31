@@ -189,6 +189,22 @@ from collections import defaultdict
 class AuthenticationRequired(Exception):
     pass
 
+LOGIN_USERS = {name.casefold(): name for name in ('AP01', 'AP02', 'AP03', 'ST022')}
+
+def authenticate_shared_login(header, shared_password):
+    """Accept one of the named shared-workspace logins with the common secret."""
+    if not shared_password or not str(header or '').startswith('Basic '):
+        return None
+    try:
+        credentials=base64.b64decode(header[6:],validate=True).decode('utf-8')
+        username,provided=credentials.split(':',1)
+    except (ValueError,UnicodeError):
+        return None
+    canonical=LOGIN_USERS.get(username.casefold())
+    if canonical and hmac.compare_digest(provided,shared_password):
+        return canonical
+    return None
+
 class Handler(BaseHTTPRequestHandler):
     server_version='ICE-Local/1.0'
     def log_message(self,*args):pass
@@ -209,21 +225,14 @@ class Handler(BaseHTTPRequestHandler):
         local=bind_host in ('127.0.0.1','::1','localhost')
         if local:
             if host not in ('127.0.0.1','localhost','::1'):raise PermissionError('Localhost access only')
+            self.authenticated_username=None
         else:
             allowed={x.strip().lower().rstrip('.') for x in (os.environ.get('ICE_ALLOWED_HOSTS','')+','+os.environ.get('REPLIT_DOMAINS','')+','+os.environ.get('REPLIT_DEV_DOMAIN','')).split(',') if x.strip()}
             if host not in allowed and not host.endswith(('.replit.app','.replit.dev','.repl.co')):
                 raise PermissionError('This host is not configured for ICE.')
             password=os.environ.get('ICE_ACCESS_PASSWORD','')
-            auth=self.headers.get('Authorization','')
-            valid=False
-            if password and auth.startswith('Basic '):
-                try:
-                    credentials=base64.b64decode(auth[6:],validate=True).decode('utf-8')
-                    username,provided=credentials.split(':',1)
-                    valid=bool(username) and hmac.compare_digest(provided,password)
-                except (ValueError,UnicodeError):
-                    valid=False
-            if not valid:raise AuthenticationRequired()
+            self.authenticated_username=authenticate_shared_login(self.headers.get('Authorization',''),password)
+            if not self.authenticated_username:raise AuthenticationRequired()
         u=urlparse(self.path);return u.path,parse_qs(u.query)
     def redirect(self,location):
         self.send_response(302);self.send_header('Location',location);self.send_header('Content-Length','0');self.send_header('Cache-Control','no-store');self.end_headers()
@@ -231,7 +240,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             path,q=self.route()
             if path in ('/login.html','/auth/login','/auth/callback'):return self.redirect('/')
-            if path=='/api/session':return self.send(200,{'token':TOKEN,'version':engine.VERSION,'settings':settings(),'country_codes':engine.COUNTRIES,'network_guard':'active','blocked_network_attempts':len(NETWORK_ATTEMPTS),'ocr_available':bool(settings().get('tesseract_path') or shutil.which('tesseract')),'user':{'name':'Local operator','role':'local'}})
+            if path=='/api/session':return self.send(200,{'token':TOKEN,'version':engine.VERSION,'settings':settings(),'country_codes':engine.COUNTRIES,'network_guard':'active','blocked_network_attempts':len(NETWORK_ATTEMPTS),'ocr_available':bool(settings().get('tesseract_path') or shutil.which('tesseract')),'user':{'name':getattr(self,'authenticated_username',None) or 'Local operator','role':'editor' if getattr(self,'authenticated_username',None) else 'local'}})
             if path=='/api/jobs':
                 with LOCK:jobs=[summary(j) for j in all_jobs()]
                 return self.send(200,sorted(jobs,key=lambda j:j['created'],reverse=True))

@@ -1,5 +1,5 @@
 """Real local HTTP upload, extraction and editing/export regression test."""
-import io, json, os, sys, tempfile, threading, time, unittest, urllib.request, urllib.error, uuid, zipfile
+import base64, io, json, os, sys, tempfile, threading, time, unittest, urllib.request, urllib.error, uuid, zipfile
 from pathlib import Path
 BASE=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(BASE))
@@ -7,6 +7,19 @@ TEMP=tempfile.TemporaryDirectory()
 os.environ['ICE_DATA_DIR']=TEMP.name
 import app
 # These HTTP checks run against the loopback-only local app without account login.
+
+class SharedLoginTest(unittest.TestCase):
+    def header(self, username, password):
+        value=base64.b64encode(f'{username}:{password}'.encode()).decode()
+        return 'Basic '+value
+    def test_four_named_logins_share_the_configured_password(self):
+        for username in ('AP01','AP02','AP03','ST022'):
+            with self.subTest(username=username):
+                self.assertEqual(app.authenticate_shared_login(self.header(username,'shared-secret'),'shared-secret'),username)
+    def test_unknown_users_and_wrong_password_are_rejected(self):
+        self.assertIsNone(app.authenticate_shared_login(self.header('AP04','shared-secret'),'shared-secret'))
+        self.assertIsNone(app.authenticate_shared_login(self.header('AP01','wrong-secret'),'shared-secret'))
+        self.assertIsNone(app.authenticate_shared_login('Basic not-base64','shared-secret'))
 
 class AppTest(unittest.TestCase):
     @classmethod
