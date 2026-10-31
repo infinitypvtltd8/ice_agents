@@ -4,15 +4,16 @@ Never reads expected XML fixtures and never performs network requests.
 Ambiguous layout, names, affiliations and mathematics stay in human review.
 """
 from __future__ import annotations
-import csv, hashlib, io, json, os, re, shutil, statistics, subprocess, tempfile, contextvars
+import csv, difflib, hashlib, io, json, os, re, shutil, statistics, subprocess, tempfile, contextvars
 import unicodedata
+from xml.sax.saxutils import escape as xml_escape
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 import fitz
 from lxml import etree, html
 
-VERSION = '1.3.0'
+VERSION = '1.4.5'
 ANI = 'http://www.elsevier.com/xml/ani/ani'
 CE = 'http://www.elsevier.com/xml/ani/common'
 XML = 'http://www.w3.org/XML/1998/namespace'
@@ -24,7 +25,7 @@ EMAIL_RE = re.compile(r'[\w.!#$%&\x27*+/=?^`{|}~-]+@[\w.-]+\.[A-Za-z]{2,}', re.U
 ORCID_RE = re.compile(r'(?<!\d)(\d{4}-\d{4}-\d{4}-[\dX]{4})(?!\d)', re.I)
 STOP_HEAD = re.compile(r'^(?:\d+(?:\.\d+)*\s+|[IVX]+\.\s*)?(?:INTRODUCTION|ACKNOWLEDGMENTS?|ACKNOWLEDGEMENTS?|APPENDIX|CONCLUSIONS?|DATA AVAILABILITY|SUPPLEMENT)', re.I)
 REF_HEAD = re.compile(r'^(?:\d+\.?\s+)?(?:References|Bibliography|Reference List|List of Cited References|Recommended Reading|Further Reading)\s*$', re.I)
-ORG = re.compile(r'\b(?:university|université|universität|universidad|universidade|universit[aàá]|institute\w*|institut\w*|laborator\w*|department|dept\.?|school|college|faculty|centre|center|research|academy|academia|hospital|clinic|observatory|foundation|polytechnic|cnrs|mit|umr|skl-iotsc|uc\s+san\s+diego|ucsd|inc\.?|corporation|division|group|unit)\b', re.I)
+ORG = re.compile(r'\b(?:university|université|universität|universidad|universidade|universit[aàá]|institute\w*|institut\w*|laborator\w*|department|dept\.?|school|college|faculty|centre|center|research|academy|academia|hospital|clinic|observatory|foundation|polytechnic|consortium|collaboration|cnrs|mit|jila|umr|skl-iotsc|uc\s+berkeley|uc\s+san\s+diego|ucsd|thermo\s+fisher\s+scientific|inc\.?|corporation|division|group|unit)\b|\([A-Z][A-Z0-9-]{1,10}\)', re.I)
 STATES = {
     'USA': set('AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split()),
     'AUS': set('ACT NSW NT QLD SA TAS VIC WA'.split()),
@@ -35,7 +36,8 @@ STATE_NAMES = {
     'AUS': {'Australian Capital Territory','New South Wales','Northern Territory','Queensland','South Australia','Tasmania','Victoria','Western Australia'},
     'CAN': {'Alberta','British Columbia','Manitoba','New Brunswick','Newfoundland and Labrador','Nova Scotia','Northwest Territories','Nunavut','Ontario','Prince Edward Island','Quebec','Québec','Saskatchewan','Yukon'},
 }
-STREET = re.compile(r'\b(?:street|st\.?|road|rd\.?|drive|dr\.?|avenue|ave\.?|boulevard|blvd\.?|suite|building|floor|campus|via|bd\.?|lane|ln\.?|highway|carretera|calle|camino|p\.?\s*o\.?\s*box|postal\s+box|route|rue|avenida|av\.?|ex-hda\.?)\b',re.I)
+STREET = re.compile(r'\b(?:street|st\.?|road|rd\.?|drive|dr\.?|avenue|ave\.?|boulevard|blvd\.?|suite|building|floor|campus|via|bd\.?|lane|ln\.?|highway|carretera|calle|camino|chemin|weg|\w+weg|p\.?\s*o\.?\s*box|postal\s+box|route|rue|avenida|av\.?|ex-hda\.?)\b',re.I)
+ROLE = re.compile(r'\b(?:associated?\s+professor|assistant\s+professor|professor|student|researcher|lecturer|postdoc(?:toral)?|ph\.?d\.?)\b', re.I)
 SPECIAL_ADDRESS = re.compile(r'\b(?:present address|current address|formerly at|former address|now at|correspondence address|corresponding address|work (?:was )?performed at)\b',re.I)
 COUNTRIES = {'USA':'USA','U.S.A.':'USA','United States':'USA','United States of America':'USA','UK':'GBR','U.K.':'GBR','United Kingdom':'GBR','England':'GBR','Scotland':'GBR','Wales':'GBR','Northern Ireland':'GBR','Canada':'CAN','Australia':'AUS','France':'FRA','Germany':'DEU','India':'IND','Sri Lanka':'LKA','China':'CHN','P. R. China':'CHN','P.R. China':'CHN','People’s Republic of China':'CHN',"People's Republic of China":'CHN','Japan':'JPN','Italy':'ITA','Spain':'ESP','Morocco':'MAR','Portugal':'PRT','Belgium':'BEL','Finland':'FIN','Poland':'POL','Slovakia':'SVK','Czechia':'CZE','Czech Republic':'CZE','South Africa':'ZAF','Netherlands':'NLD','Switzerland':'CHE','Sweden':'SWE','Norway':'NOR','Denmark':'DNK','Austria':'AUT','New Zealand':'NZL','Brazil':'BRA','Mexico':'MEX','South Korea':'KOR','Republic of Korea':'KOR','Singapore':'SGP','Hong Kong':'HKG','Macau':'MAC','Taiwan':'TWN','Republic of China':'TWN','Israel':'ISR','Palestine':'PSE','Russia':'RUS','Ukraine':'UKR','Greece':'GRC','Turkey':'TUR','Türkiye':'TUR','Ireland':'IRL'}
 try:
@@ -108,6 +110,17 @@ def split_author_alias(value):
                 return re.sub(r'\s+',' ',clean).strip(' ,'),alias
     return text,''
 def compact(t): return re.sub(r'[^a-z0-9]', '', fold(t))
+
+def xml10_text(value):
+    """Replace code points forbidden by XML 1.0 with a visible review glyph."""
+    cleaned=[];replaced=0
+    for char in str(value or ''):
+        code=ord(char)
+        legal=(code in (0x9,0xA,0xD) or 0x20<=code<=0xD7FF or
+               0xE000<=code<=0xFFFD or 0x10000<=code<=0x10FFFF)
+        cleaned.append(char if legal else '\ufffd')
+        replaced+=not legal
+    return ''.join(cleaned),replaced
 def arxiv_id(t):
     """The bare arXiv ID in a value such as 'arXiv:2408.09673v2'."""
     m=ID_RE.search(str(t or ''));return m[1] if m else norm(str(t or ''))
@@ -128,6 +141,76 @@ def join_text(lines):
     accents={'´':'\u0301','`':'\u0300','¨':'\u0308','ˆ':'\u0302','ˇ':'\u030c','˜':'\u0303'}
     for a,c in accents.items(): s=re.sub(re.escape(a)+r'([A-Za-z])', lambda m:nfc(m[1]+c), s)
     return nfc(s)
+
+def inline_markup_from_lines(lines, plain):
+    """Return source-evidenced sup/inf markup when span alignment is exact."""
+    if not lines or not plain:
+        return ''
+    raw_lines=[nfc(''.join(span.get('text','') for span in line.get('spans',[]))) for line in lines]
+    raw=' '.join(raw_lines)
+    if not raw:
+        return ''
+    target=nfc(plain)
+    mapping=[None]*len(raw)
+    for block in difflib.SequenceMatcher(None,raw,target,autojunk=False).get_matching_blocks():
+        for offset in range(block.size):mapping[block.a+offset]=block.b+offset
+    candidates=[];cursor=0
+    for li,line in enumerate(lines):
+        spans=line.get('spans',[])
+        normal=[s for s in spans if s.get('text','').strip() and not (s.get('flags',0)&1)]
+        baseline=statistics.median([s.get('bbox',[0,0,0,0])[3] for s in normal]) if normal else line.get('bbox',[0,0,0,0])[3]
+        base_size=statistics.median([s.get('size',line.get('size',10)) for s in normal]) if normal else line.get('size',10)
+        for span in spans:
+            value=nfc(span.get('text',''))
+            start=cursor;cursor+=len(value)
+            if not value.strip() or re.search(r'\s',value) or len(value)>10:
+                continue
+            if not re.fullmatch(r'[\w\u0370-\u03ff]+',value,re.UNICODE):
+                continue
+            box=span.get('bbox',[0,0,0,0]);size=span.get('size',base_size)
+            raised=bool(span.get('flags',0)&1) or (size<base_size*.9 and box[3]<baseline-base_size*.12)
+            lowered=size<base_size*.9 and box[1]>baseline-base_size*.1 and box[3]>baseline+base_size*.08
+            tag='sup' if raised else 'inf' if lowered else ''
+            if not tag:
+                continue
+            mapped=[mapping[i] if i<len(mapping) else None for i in range(start,start+len(value))]
+            if any(index is None for index in mapped):
+                continue
+            target_start=mapped[0];target_end=mapped[-1]+1
+            if mapped!=list(range(target_start,target_end)) or target[target_start:target_end]!=value:
+                continue
+            candidates.append((target_start,target_end,tag))
+        if li<len(lines)-1:cursor+=1
+    candidates.sort()
+    if not candidates or any(a[1]>b[0] for a,b in zip(candidates,candidates[1:])):
+        return ''
+    result=[];pos=0
+    for start,end,tag in candidates:
+        result.append(xml_escape(target[pos:start]))
+        result.append(f'<{tag}>{xml_escape(target[start:end])}</{tag}>')
+        pos=end
+    result.append(xml_escape(target[pos:]))
+    markup=''.join(result)
+    return markup if nfc(''.join(etree.fromstring(('<root>'+markup+'</root>').encode('utf-8')).itertext()))==target else ''
+
+def is_complex_display_formula(text):
+    """Conservatively detect standalone equations that plain XML text cannot preserve."""
+    value=str(text or '').strip()
+    if len(value)<16 or len(re.findall(r'[=≈≃≤≥∑∏∫√∂∇∞±×÷→↔∝∈∉⊂⊆∧∨∫]',value))<4:
+        return False
+    words=re.findall(r'[^\W\d_]+',value,re.UNICODE)
+    return len(words)<=8 and bool(re.search(r'[=∑∏∫√∂∇]',value))
+
+def replace_complex_display_formulas(lines, plain):
+    """Replace only self-contained, symbol-dense display equations with the agreed placeholder."""
+    formulas=[line for line in lines if is_complex_display_formula(line.get('text',''))]
+    result=plain;replaced=0
+    for line in formulas:
+        text=join_text([line])
+        if text and text in result:
+            result=result.replace(text,'(Formula presented)',1)
+            replaced+=1
+    return result,replaced
 
 def secure_xml(data):
     if b'<!DOCTYPE' in data.upper() or b'<!ENTITY' in data.upper(): raise ValueError('DTD/entity declarations are not accepted.')
@@ -210,18 +293,55 @@ def ocr_page(page, page_num, executable):
                           'words':[{'text':w['text'],'bbox':b,'confidence':float(w['conf'])} for w,b in zip(words,boxes)]})
         return lines
 
+def recover_glyph_text(text, bbox, font, trace_spans):
+    """Recover U+FFFD when PyMuPDF's glyph trace resolves the same glyph.
+
+    Substitution is allowed only when the span's non-whitespace characters
+    align one-to-one with the overlapping trace glyphs. Otherwise the original
+    text is retained for review rather than guessed.
+    """
+    if '\ufffd' not in text:
+        return text
+    x0, y0, x1, y1 = bbox
+    traced=[]
+    for span in trace_spans:
+        if span.get('font') != font:
+            continue
+        sx0, sy0, sx1, sy1 = span.get('bbox', (0, 0, 0, 0))
+        overlap=max(0, min(x1, sx1)-max(x0, sx0))*max(0, min(y1, sy1)-max(y0, sy0))
+        area=max(0, sx1-sx0)*max(0, sy1-sy0)
+        if area and overlap/area >= .5:
+            traced.extend(chr(ch[0]) for ch in span.get('chars', ())
+                          if ch and isinstance(ch[0], int) and 0 <= ch[0] <= 0x10ffff
+                          and not chr(ch[0]).isspace())
+    positions=[i for i,ch in enumerate(text) if not ch.isspace()]
+    if len(positions) != len(traced) or any(ch == '\ufffd' for ch in traced):
+        return text
+    chars=list(text)
+    for pos, ch in zip(positions, traced):
+        if chars[pos] == '\ufffd':
+            chars[pos]=ch
+    return ''.join(chars)
+
 def extract_layout(pdf, settings, progress=lambda x:None):
-    doc=fitz.open(pdf);pages=[];issues=[]
+    doc=fitz.open(pdf);pages=[];issues=[];invalid_xml_chars=0;invalid_xml_evidence=[]
     tess=settings.get('tesseract_path') or shutil.which('tesseract')
     if not tess and os.name=='nt':
         candidate=Path(os.environ.get('ProgramFiles','C:/Program Files'))/'Tesseract-OCR/tesseract.exe'
         if candidate.exists():tess=str(candidate)
     for pi,page in enumerate(doc):
         progress(f'Reading page {pi+1} of {len(doc)}')
-        lines=[]
+        lines=[];trace_spans=page.get_texttrace()
         for bi,b in enumerate(page.get_text('dict')['blocks']):
             for li,l in enumerate(b.get('lines',[])):
-                spans=l.get('spans',[]);text=''.join(s['text'] for s in spans)
+                spans=l.get('spans',[])
+                for span in spans:
+                    span['text']=recover_glyph_text(span['text'],span['bbox'],span['font'],trace_spans)
+                    span['text'],replaced=xml10_text(span['text'])
+                    if replaced:
+                        invalid_xml_chars+=replaced
+                        invalid_xml_evidence.append({'page':pi+1,'bbox':list(span['bbox']),'text':'Forbidden XML control character replaced with U+FFFD'})
+                text=''.join(s['text'] for s in spans)
                 if not text.strip():continue
                 lines.append({'id':f'p{pi+1}-b{bi}-l{li}','page':pi+1,'block':bi,'text':text,'bbox':list(l['bbox']),'size':max(s['size'] for s in spans),'bold':sum(len(s['text']) for s in spans if s['flags']&16)>len(text)*.5,'direction':list(l['dir']),'spans':[{'text':s['text'],'bbox':list(s['bbox']),'size':s['size'],'flags':s['flags'],'font':s['font']} for s in spans],'origin':'NATIVE'})
         native_chars=sum(len(l['text']) for l in lines if l['direction'][0]>.8)
@@ -236,10 +356,19 @@ def extract_layout(pdf, settings, progress=lambda x:None):
                 if statistics.mean(l['ocr_confidence'] for l in ol)<75:
                     issues.append(issue('PDF-003','extraction',f'Page {pi+1} OCR confidence is below 75; inspect its image and correct metadata.',evidence(ol[:1])))
             except Exception as e:issues.append(issue('PDF-002','extraction',f'Page {pi+1}: {e}'))
+        for line in lines:
+            if line.get('spans'):continue
+            line['text'],replaced=xml10_text(line.get('text',''))
+            if replaced:
+                invalid_xml_chars+=replaced
+                invalid_xml_evidence.append({'page':pi+1,'bbox':line.get('bbox',[]),'text':'Forbidden XML control character replaced with U+FFFD'})
         raw_links=page.get_links()
         links=[{'bbox':list(l['from']),'uri':l.get('uri',''),'kind':l.get('kind'),
                 'page':l.get('page',-1),'internal':bool(l.get('kind')==fitz.LINK_GOTO or l.get('page',-1)>=0)} for l in raw_links]
-        native_words=[{'text':str(w[4]),'bbox':list(w[:4]),'block':w[5],'line':w[6]} for w in page.get_text('words')]
+        native_words=[]
+        for w in page.get_text('words'):
+            word,replaced=xml10_text(str(w[4]))
+            native_words.append({'text':word,'bbox':list(w[:4]),'block':w[5],'line':w[6]})
         # Preserve which printed numeric tokens are clickable intra-document page
         # references. Reference serialization can then remove only those locators,
         # while ordinary citation pages and external DOI/URL links remain intact.
@@ -257,6 +386,8 @@ def extract_layout(pdf, settings, progress=lambda x:None):
         pages.append({'number':pi+1,'width':page.rect.width,'height':page.rect.height,'rotation':page.rotation,
                       'text_origin':'OCR' if lines and lines[0]['origin']=='OCR' else 'NATIVE',
                       'lines':lines,'words':[w for l in lines for w in l['words']] if lines and lines[0]['origin']=='OCR' else native_words,'links':links})
+    if invalid_xml_chars:
+        issues.append(issue('PDF-009','extraction',f'{invalid_xml_chars} PDF control character(s) cannot appear in XML 1.0 and were represented by U+FFFD. Check the marked PDF locations and correct the source glyphs if they carry meaning.',invalid_xml_evidence[:8]))
     return {'version':1,'engine_version':VERSION,'pdf_sha256':digest(Path(pdf).read_bytes()),'pages':pages},issues
 
 def initials(given):
@@ -284,9 +415,16 @@ def parse_affiliation(text, marker, ev, printed_marker=True):
     if len(chunks)>=2 and norm(chunks[-1])=='china' and norm(chunks[-2]) in ('hong kong','hong kong sar','hong kong special administrative region'):
         result['country_code']='HKG';result['country_text']=', '.join(chunks[-2:]);chunks=chunks[:-2]
     if chunks and not result['country_code']:
+        # A contact email may follow the country in parentheses, sometimes
+        # split across PDF lines (for example ``USA (name-``). Do not let that
+        # tail hide an otherwise explicit country from address parsing.
+        country_candidate=re.sub(r'\s+\([^)]*$', '', chunks[-1]).strip()
+        country_candidate=re.sub(r'\s+\([^)]*@[^)]*\)\s*$', '', country_candidate).strip()
         for country,code in sorted(COUNTRIES.items(),key=lambda item:len(item[0]),reverse=True):
-            if norm(chunks[-1].rstrip('.'))==norm(country.rstrip('.')):
-                result['country_code']=code;result['country_text']=chunks.pop();break
+            if norm(country_candidate.rstrip('.'))==norm(country.rstrip('.')):
+                result['country_code']=code;result['country_text']=country_candidate
+                chunks.pop()
+                break
     if result['country_code']=='CHN' and re.search(r'\bhong\s+kong\b',text,re.I):
         result['country_code']='HKG';result['country_text']='Hong Kong, China'
     elif result['country_code']=='CHN' and re.search(r'\b(?:macau|macao)\b',text,re.I):
@@ -330,7 +468,11 @@ def parse_affiliation(text, marker, ev, printed_marker=True):
 
     # Handle standard postal/state forms, including full state names, in either
     # a single comma chunk ("Boulder, Colorado 80301") or separate chunks.
-    postal_re=re.compile(r'(?<!\w)([A-Z]{2}-)?(\d{4,6}|[A-Z]\d[A-Z]\s*\d[A-Z]\d)(?!\w)',re.I)
+    postal_pattern=r'\d{5}-\d{4}|[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|[A-Z]{2}-\d{4,6}|\d{4,6}|[A-Z]\d[A-Z]\s*\d[A-Z]\d'
+    # Dutch postcodes are four digits plus two letters (for example 5651 GG).
+    # Keeping the whole token prevents the letters being misread as a city.
+    if result['country_code']=='NLD':postal_pattern=r'\d{4}\s*[A-Z]{2}|'+postal_pattern
+    postal_re=re.compile(r'(?<!\w)('+postal_pattern+r')(?!\w)',re.I)
     for i in range(len(chunks)-1,-1,-1):
         if i in consumed:continue
         c=chunks[i]
@@ -382,7 +524,7 @@ def parse_affiliation(text, marker, ev, printed_marker=True):
             if i in consumed or STREET.search(c) or ORG.search(c):continue
             pm=postal_re.search(c)
             if not pm:continue
-            if len(re.findall(r'\d',pm[0]))<4:continue
+            if len(re.findall(r'\d',pm[0]))<4 and not re.fullmatch(r'[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}',pm[0],re.I):continue
             left=c[:pm.start()].strip(' ,');right=c[pm.end():].strip(' ,')
             if left and not ORG.search(left):result['city']=left
             if right and not ORG.search(right):result['city']=right
@@ -407,7 +549,7 @@ def parse_affiliation(text, marker, ev, printed_marker=True):
     if not result['city']:
         org_positions=[i for i,c in enumerate(chunks) if i not in consumed and (ORG.search(c) or c in ('MIT','CNRS'))]
         first_org=min(org_positions,default=-1);last_org=max(org_positions,default=-1)
-        choices=[(i,c) for i,c in enumerate(chunks) if i not in consumed and not STREET.search(c) and not ORG.search(c) and not re.search(r'\d{4,6}',c) and not (first_org<i<last_org)]
+        choices=[(i,c) for i,c in enumerate(chunks) if i not in consumed and not STREET.search(c) and not ROLE.search(c) and not ORG.search(c) and not re.search(r'\d{4,6}',c) and not (first_org<i<last_org)]
         if choices:
             # For a trailing regional name after a locality, take the preceding
             # locality as city and preserve the region in address-part.
@@ -418,21 +560,72 @@ def parse_affiliation(text, marker, ev, printed_marker=True):
             result['city']=c.strip()
             consumed.add(i)
 
+    for i,c in enumerate(chunks):
+        if (re.search(r'\([A-Z][A-Z0-9-]{1,10}\)\s*$',c) and i>0 and i-1 not in consumed
+                and not ORG.search(chunks[i-1]) and not STREET.search(chunks[i-1])
+                and not ROLE.search(chunks[i-1]) and not re.fullmatch(r'\d{1,2}',chunks[i-1])):
+            chunks[i]=chunks[i-1]+', '+c
+            consumed.add(i-1)
     organization_indices=[i for i,c in enumerate(chunks) if i not in consumed and (ORG.search(c) or c in ('MIT','CNRS'))]
     first_org=min(organization_indices,default=-1);last_org=max(organization_indices,default=-1)
     for i,c in enumerate(chunks):
         if i in consumed:continue
         if ORG.search(c) or c in ('MIT','CNRS'):
-            result['organizations'].append(c)
+            # An acronym-bearing institution name may be split at a comma
+            # inside the name (e.g. ``Cosmology, Universe ... (CURL)``).
+            if (re.search(r'\([A-Z][A-Z0-9-]{1,10}\)\s*$',c) and i>0 and i-1 not in consumed
+                    and not ORG.search(chunks[i-1]) and not STREET.search(chunks[i-1])
+                    and not re.fullmatch(r'\d{1,2}|(?:PhD|Ph\.D\.)?\s*(?:student|professor|researcher)',chunks[i-1],re.I)):
+                c=chunks[i-1]+', '+c;consumed.add(i-1)
+            # Split coordinated institution names only when each side is
+            # independently recognizable as an organization. This preserves
+            # the printed order while keeping ordinary names joined when the
+            # second side is not itself an institution.
+            coordinated=re.split(r'\s+(?:and|&)\s+',c,maxsplit=1,flags=re.I)
+            if len(coordinated)==2 and all(ORG.search(part) for part in coordinated):
+                result['organizations'].extend(part.strip() for part in coordinated)
+            else:
+                result['organizations'].append(c)
         elif first_org>=0 and first_org<i<last_org and result['organizations'] and not STREET.search(c):
             result['organizations'][-1]+=', '+c
         else:
+            if re.fullmatch(r'\d{1,2}',c) or ROLE.search(c):
+                continue
             result['address_parts'].append(c)
             if re.search(r'\d{4,6}',c) and not STREET.search(c):result['component_warnings'].append('Postal or locality wording was not safely separated: '+c)
     # Preserve source order and do not emit city/state/postal data a second time as address text.
     result['organizations']=list(dict.fromkeys(result['organizations']))
     if not result['organizations']:result['component_warnings'].append('No organization component was safely identified.')
     return result
+
+
+def merge_affiliation_fragments(affiliations):
+    """Merge only strong suffix-fragment duplicates; keep combined source evidence."""
+    merged=[];fragments=[]
+    for candidate in affiliations:
+        candidate_source=norm(candidate.get('source_text',''))
+        candidate_orgs=[norm(x) for x in candidate.get('organizations',[]) if norm(x)]
+        duplicate=None
+        for complete in merged:
+            complete_source=norm(complete.get('source_text',''))
+            complete_orgs=[norm(x) for x in complete.get('organizations',[]) if norm(x)]
+            same_place=all(norm(candidate.get(k,''))==norm(complete.get(k,'')) for k in ('city','state','postal_code','country_code'))
+            source_suffix=bool(candidate_source and complete_source and candidate_source!=complete_source and complete_source.endswith(candidate_source))
+            org_suffix=any(short!=long and long.endswith(short) for short in candidate_orgs for long in complete_orgs)
+            if same_place and candidate.get('country_code') and candidate.get('postal_code') and source_suffix and org_suffix:
+                duplicate=complete;break
+        if duplicate:
+            have={e.get('line_id') for e in duplicate.get('evidence',[]) if e.get('line_id')}
+            duplicate.setdefault('evidence',[]).extend(e for e in candidate.get('evidence',[]) if not e.get('line_id') or e.get('line_id') not in have)
+            duplicate.setdefault('source_text_fragments',[]).append(candidate.get('source_text',''))
+            duplicate.setdefault('markers',[duplicate.get('marker','')])
+            if candidate.get('marker') and candidate['marker'] not in duplicate['markers']:duplicate['markers'].append(candidate['marker'])
+            fragments.append((duplicate,candidate))
+        else:
+            candidate.setdefault('markers',[candidate.get('marker','')])
+            merged.append(candidate)
+    id_map={fragment.get('id'):complete.get('id') for complete,fragment in fragments if fragment.get('id')}
+    return merged,fragments,id_map
 
 SUPERSCRIPT_DIGITS = str.maketrans('⁰¹²³⁴⁵⁶⁷⁸⁹ᵃᵇᶜᵈᵉᶠ', '0123456789abcdef')
 FRONT_HEADING = re.compile(r'^\s*(?:(?:\d+(?:\.\d+)*|[IVX]+)[.\s]+)?(?:abstract|synopsis|summary|key\s*words|keywords|index terms|introduction|accepted|received|submitted)\b', re.I)
@@ -443,7 +636,7 @@ def front_marker(text, allow_letters=False):
     normalized=text.translate(SUPERSCRIPT_DIGITS)
     label=r'\d{1,2}|[★*∗†‡✉]'
     if allow_letters:label+=r'|[a-fA-F]'
-    match=re.match(r'^\s*('+label+r')\s*[.)]?(?:\s+|(?=[A-ZÀ-Ž])|$)(.*)$',normalized)
+    match=re.match(r'^\s*('+label+r')\s*[.,)]?(?:\s+|(?=[A-ZÀ-Ž])|$)(.*)$',normalized)
     return (match[1].lower(),match[2].strip()) if match else (None,text.strip())
 
 def author_markers(suffix):
@@ -457,6 +650,62 @@ def author_markers(suffix):
     if not match:return []
     raw=match[1].translate(SUPERSCRIPT_DIGITS)
     return re.findall(r'\d{1,2}|[a-f]|[★*∗†‡✉]',raw.lower())
+
+def author_name_word_boxes(layout, authors):
+    """Return precise surname-word boxes for authors in the PDF author block."""
+    boxes=defaultdict(list)
+    for author in authors:
+        surname_parts=re.findall(r'[^\W\d_]+',str(author.get('surname','')),re.U)
+        if not surname_parts:continue
+        surname=compact(surname_parts[-1])
+        line_ids={e.get('line_id') for e in author.get('evidence',[]) if e.get('line_id')}
+        for page in layout.get('pages',[]):
+            line_map={line.get('id'):line for line in page.get('lines',[]) if line.get('id') in line_ids}
+            if not line_map:continue
+            row_keys={(line.get('block'),int(line['id'].rsplit('-l',1)[-1])) for line in line_map.values()}
+            for word in page.get('words',[]):
+                if (word.get('block'),word.get('line')) not in row_keys:continue
+                token=compact(re.sub(r'\d+$','',str(word.get('text',''))))
+                if token.endswith(surname):
+                    boxes[author['id']].append({'page':page['number'],'bbox':word['bbox']})
+    return boxes
+
+def nearest_author_by_pdf_box(authors, name_boxes, page_number, bbox):
+    """Match an author-side superscript or link to the closest surname word."""
+    x0,y0,x1,y1=bbox
+    candidates=[]
+    for author in authors:
+        for item in name_boxes.get(author['id'],[]):
+            if item['page']!=page_number:continue
+            ax0,ay0,ax1,ay1=item['bbox']
+            vertical_gap=max(ay0-y1,y0-ay1,0)
+            if vertical_gap>8:continue
+            horizontal_gap=max(ax0-x1,x0-ax1,0)
+            candidates.append((horizontal_gap,vertical_gap,author))
+    candidates.sort(key=lambda value:(value[0],value[1]))
+    if not candidates:return None
+    if len(candidates)>1 and candidates[0][:2]==candidates[1][:2]:return None
+    return candidates[0][2] if candidates[0][0]<=32 else None
+
+def apply_geometric_author_markers(layout, authors, affiliation_markers):
+    """Recover superscripts detached from author names by PDF line/span ordering."""
+    allowed={str(marker).casefold() for marker in affiliation_markers}
+    allowed_symbols={'★','*','∗','†','‡','✉'}
+    name_boxes=author_name_word_boxes(layout,authors)
+    for page in layout.get('pages',[]):
+        for line in page.get('lines',[]):
+            for span in line.get('spans',[]):
+                # In PyMuPDF's span flags, bit 0 identifies superscript text.
+                if not (int(span.get('flags',0))&1):continue
+                text=str(span.get('text','')).strip()
+                markers=author_markers(text)
+                markers=[marker for marker in markers if marker in allowed or marker in allowed_symbols]
+                if not markers:continue
+                author=nearest_author_by_pdf_box(authors,name_boxes,page['number'],span['bbox'])
+                if author:
+                    author['markers']=list(dict.fromkeys([*author.get('markers',[]),*markers]))
+                    author.setdefault('marker_evidence',[]).append({'page':page['number'],'bbox':span['bbox'],'text':text})
+    return name_boxes
 
 def front_affiliations(horizontal, author_end, height, author_markers_seen):
     """Locate compact front-matter address lines using labels, organizations and geometry."""
@@ -531,7 +780,12 @@ def front_affiliations(horizontal, author_end, height, author_markers_seen):
         deep_marked_start=bool(marked_start and marker.casefold() in known_markers)
         if l['bbox'][1]>top_limit and not deep_marked_start and not current:
             continue
-        unmarked_start=bool(ORG.search(raw[:95]) and len(raw)<220 and not EMAIL_RE.search(raw))
+        # Parenthesized short capitals often encode a scientific acronym in
+        # abstract prose (e.g. active Brownian particles (ABPs)); ORG also
+        # recognizes parenthesized organization acronyms, so do not let that
+        # alone turn an unheaded abstract into a false affiliation.
+        org_probe=re.sub(r'\([A-Z][A-Z0-9-]{1,8}[a-z]?\)','',raw[:95])
+        unmarked_start=bool(ORG.search(org_probe) and len(raw)<220 and not EMAIL_RE.search(raw))
         # Some papers print only a city/country line below each author. The guide
         # says to retain limited affiliation data, so accept a short locality-like
         # line in the address zone without inventing an institution name.
@@ -613,6 +867,22 @@ def endmatter_author_affiliations(layout, authors):
     # every printed affiliation and creates false author links.
     if len(layout.get('pages',[]))<2 or not authors:return [],{}
     lines=layout['pages'][-1]['lines'];start=max(0,len(lines)-30);tail=lines[start:];found=[];links={}
+
+    def email_author(email):
+        """Resolve an end-matter email only when its local part uniquely names an author."""
+        local=email.split('@',1)[0].casefold()
+        compact_local=re.sub(r'[^a-z0-9]','',local)
+        matches=[]
+        for author in authors:
+            surname=re.sub(r'[^a-z0-9]','',str(author.get('surname','')).casefold())
+            given=re.sub(r'[^a-z0-9]','',str(author.get('given_name','')).casefold())
+            if surname and surname in compact_local and (len(surname)>=3):
+                # A surname in the local part is sufficient only when unique in this author list.
+                matches.append(author)
+            elif given and len(given)>=4 and given in compact_local:
+                matches.append(author)
+        return matches[0] if len({a['id'] for a in matches})==1 else None
+
     for index,line in enumerate(tail):
         if not ORG.search(line.get('text','')):continue
         context=' '.join(x.get('text','') for x in tail[max(0,index-4):index])
@@ -631,6 +901,25 @@ def endmatter_author_affiliations(layout, authors):
         source=re.sub(r"People[’']s\s+Re-\s*public", 'People’s Republic', source, flags=re.I)
         source=re.sub(r'(?<=\w)-\s+(?=[a-z])','',source)
         if not COUNTRY_END.search(source) and not re.search(r'\b\d{4,6}\b',source):continue
+        # End-matter often prints a shared author-name line before several addresses.
+        # Proximity alone would link every nearby author to every address. Prefer a
+        # uniquely identifying email printed immediately after this address; otherwise
+        # accept only a single named author, and leave multi-author blocks unlinked.
+        nearby_email=''
+        for following in tail[index+len(block):index+len(block)+3]:
+            value=following.get('text','').strip()
+            if following.get('page')!=line.get('page') or following.get('bbox',[0,0])[1]-block[-1].get('bbox',[0,0,0,0])[3]>24:break
+            email_match=EMAIL_RE.search(value)
+            if email_match:
+                nearby_email=email_match.group(0)
+                break
+            if ORG.search(value) or COUNTRY_END.search(value):break
+        owner=email_author(nearby_email) if nearby_email else None
+        if owner:
+            author_ids=[owner['id']]
+            if not owner.get('email'):owner['email']=nearby_email
+        elif len(author_ids)!=1:
+            author_ids=[]
         marker='endmatter-'+str(len(found)+1)
         affiliation=parse_affiliation(source,marker,evidence(block),False)
         affiliation['id']='aff-endmatter-'+str(len(found)+1)
@@ -716,7 +1005,7 @@ def apply_correspondence_rules(md, layout):
     if not authors:return
     lines=[line for page in layout.get('pages',[]) for line in page.get('lines',[])]
     by_id={line.get('id'):line for line in lines}
-    symbols={'*','∗','✉','✉️'}
+    symbols={'*','∗','★','✉','✉️'}
     if len(authors)==1:
         author=authors[0]
         if author.get('email') or author.get('affiliation_ids'):
@@ -736,7 +1025,11 @@ def apply_correspondence_rules(md, layout):
                 author['correspondence_basis']='author-named-in-correspondence-statement'
                 author['correspondence_evidence']=evidence([line])
     for author in authors:
-        marks=set(author.get('markers',[])) & symbols
+        author_markers_seen=list(author.get('markers',[]))
+        marks=set(author_markers_seen) & symbols
+        # Preserve asterisk multiplicity. A PDF's ``**`` email footnote must
+        # not collapse into the single ``*`` correspondence marker.
+        star_count=max((sum(m in ('*','∗','★') for m in author_markers_seen)),0)
         author_evidence=author.get('evidence',[])
         source_lines=[by_id[e.get('line_id')] for e in author_evidence if e.get('line_id') in by_id]
         if not source_lines:continue
@@ -747,7 +1040,9 @@ def apply_correspondence_rules(md, layout):
             text=item.get('text',''); visible=fold(text)
             pos=visible.find(surname) if surname else -1
             if pos>=0:
-                marks.update(set(author_markers(text[pos+len(surname):])) & symbols)
+                recovered=author_markers(text[pos+len(surname):])
+                marks.update(set(recovered) & symbols)
+                star_count=max(star_count,sum(m in ('*','∗','★') for m in recovered))
         # Some PDFs place raised symbols in a separate text span/line at the
         # right edge of the name. Treat a tightly adjacent same-baseline mark
         # as part of that author's name, with the PDF coordinates as evidence.
@@ -760,16 +1055,27 @@ def apply_correspondence_rules(md, layout):
                 vertical_gap=max(0,sb[1]-lb[3],lb[1]-sb[3])
                 horizontal_gap=lb[0]-sb[2]
                 if vertical_gap<=4 and -3<=horizontal_gap<=35:
-                    marks.update(set(author_markers(candidate)) & symbols)
+                    recovered=author_markers(candidate)
+                    marks.update(set(recovered) & symbols)
+                    star_count=max(star_count,sum(m in ('*','∗','★') for m in recovered))
         if not marks:continue
-        marker=next((m for m in ('✉️','✉','∗','*') if m in marks),None)
+        # An envelope is an explicit author-side contact cue. A single
+        # author-side asterisk may also be a correspondence cue under the
+        # supplied rules, but a doubled mark (``**``) is a separate footnote
+        # marker and must not be treated as the same cue.
+        marker=next((m for m in ('✉️','✉') if m in marks),None)
+        if marker is None and star_count==1:
+            marker=next(m for m in ('∗','*','★') if m in marks)
         if not marker:continue
         # Only a matching symbol note can override the author-side marker.
         # Keep this restricted to footnote-style lines to avoid stars in body math.
         notes=[]
         for line in lines:
             text=line.get('text','').strip()
-            if not text.startswith(marker):continue
+            marker_pattern=re.escape(marker)
+            if marker in ('*','∗'):
+                marker_pattern+=r'(?![\*∗])'
+            if not re.match(r'^'+marker_pattern,text):continue
             if not any(line.get('page')==src.get('page') and
                        line.get('bbox',[0,0,0,0])[1] >= src.get('bbox',[0,0,0,0])[1]
                        for src in source_lines):continue
@@ -785,16 +1091,17 @@ def extract_metadata(layout, support, settings):
     issues=[];pages=layout['pages'];lines=[l for p in pages for l in p['lines']];first=pages[0]['lines']
     DOC_WORDS.set(frozenset(w.casefold() for l in lines for w in re.findall(r'[^\W\d_]+(?:-[^\W\d_]+)*',l['text'])))
     horizontal=[l for l in first if l['direction'][0]>.8]
-    md={'base_id':'','version':None,'title':'','abstract':'','keywords':[],'authors':[],'affiliations':[],'references':[],'field_evidence':{},'source_values':support,'profile':{'supplier_id':'4','order_id':'unknown','parcel_id':'none','source_id':'???'}}
+    md={'base_id':'','version':None,'pdf_base_id':'','pdf_version':None,'title':'','title_markup':'','abstract':'','abstract_markup':'','keywords':[],'authors':[],'affiliations':[],'references':[],'field_evidence':{},'source_values':support,'profile':{'supplier_id':'4','order_id':'unknown','parcel_id':'none','source_id':'???'}}
     def stamp(candidates,need_version):
         return next(((m,l) for l in candidates for m in [STAMP_RE.search(l['text'])] if m and (m[2] or not need_version)),None)
     # A first-page stamp without a version is still the ID; the version check then flags it.
     found=stamp(first,True) or stamp(first,False)
     if not found:
         found=stamp(lines,True)
-        issues.append(issue('ID-004','base_id','ID/version is missing from the expected first-page arXiv stamp. Check the PDF.'))
     if found:
-        m,l=found;md['base_id'],md['version']=m[1],int(m[2]) if m[2] else None;md['field_evidence']['base_id']=evidence([l])
+        m,l=found;md['base_id'],md['version']=m[1],int(m[2]) if m[2] else None
+        md['pdf_base_id'],md['pdf_version']=md['base_id'],md['version']
+        md['field_evidence']['base_id']=evidence([l])
     top=[l for l in horizontal if l['bbox'][1]<pages[0]['height']*.25 and not re.search(r'MNRAS|Preprint|Compiled using|Accepted|Received',l['text'])]
     if top:
         maxsize=max(l['size'] for l in top)
@@ -806,9 +1113,35 @@ def extract_metadata(layout, support, settings):
             pdf_title=join_text(titlelines);md['field_evidence']['title']=evidence(titlelines)
             md['title'],md['title_capture_source']=choose_title(pdf_title,support.get('html_title',''))
             md['title_candidates']={'pdf':pdf_title,'html':clean_title(support.get('html_title',''),True)}
+            if nfc(md['title'])==nfc(pdf_title):md['title_markup']=inline_markup_from_lines(titlelines,md['title'])
             if any(any((s['flags']&1) or (s['size']<l['size']*.82 and re.search(r'[\w\d]',s['text']))
                        for s in l.get('spans',[])) for l in titlelines):
                 issues.append(issue('PDF-008','title','Title contains raised/lowered or mathematical typography. Check and tag the printed title before delivery.',evidence(titlelines)))
+    # A support-file ID is accepted only when PDF and HTML titles match and
+    # HTML/SCRAPPING IDs agree. Any versions that are present must also agree.
+    pdf_title=clean_title(md.get('title_candidates',{}).get('pdf') or md.get('title',''))
+    html_title=clean_title(support.get('html_title',''),True)
+    html_id=arxiv_id(support.get('html_id',''))
+    scrap_id=arxiv_id(support.get('scrapping_id',''))
+    api_id=arxiv_id(support.get('api_id','')) if support.get('api_id') else ''
+    versions=[int(v) for v in (support.get('html_version'),support.get('scrapping_version')) if v is not None]
+    titles_agree=bool(pdf_title and html_title and norm(nfc(pdf_title))==norm(nfc(html_title)))
+    ids_agree=bool(html_id and scrap_id and html_id==scrap_id and (not api_id or api_id==html_id))
+    versions_agree=len(set(versions))<=1
+    if titles_agree and ids_agree and versions_agree:
+        if not md['base_id']:
+            md['base_id']=html_id
+            md['version']=versions[0] if versions else None
+            md['id_capture_source']='HTML + SCRAPPING; PDF/HTML title match'
+        elif md['base_id']==html_id and md.get('version') is None and versions:
+            md['version']=versions[0]
+        elif md['base_id']!=html_id or (md.get('version') is not None and versions and md['version']!=versions[0]):
+            issues.append(issue('ID-004','base_id','PDF and corroborated HTML/SCRAPPING identity disagree. Kept the PDF identity for review.'))
+    elif not md['base_id']:
+        reason=('PDF and HTML titles do not match exactly.' if not titles_agree else
+                'HTML, API, and scrapping IDs do not agree.' if not ids_agree else
+                'HTML and scrapping versions conflict.')
+        issues.append(issue('ID-004','base_id','PDF has no arXiv stamp; support-file identity was not accepted. '+reason))
     title_end=max((e['bbox'][3] for e in md['field_evidence'].get('title',[])),default=0)
     api_authors=support['api_authors'];authorlines=[];found=[];used_occurrences=set();author_candidates=[]
     for a in api_authors:
@@ -854,7 +1187,12 @@ def extract_metadata(layout, support, settings):
         elif compatible_given_name(a.get('given_name',''),nearest) and pdf_name and len(api_tokens)==len(name_tokens(nearest)) and any(len(t)==1 for t in api_tokens) and any(len(t)>1 for t in pdf_tokens):
             a={**a,'given_name':pdf_name}
         selected_given=pdf_name if alias and compatible_given_name(a.get('given_name',''),pdf_name) else a['given_name']
-        au={'id':f'author-{seq}','global_seq':seq,'given_name':selected_given,'surname':a['surname'],'initials':initials(selected_given),'displayed_name':(selected_given+' '+a['surname']).strip(),'source_text':(rawnearest+' '+l['text'][pos:end]).strip(),'pdf_name_match':compatible_given_name(a.get('given_name',''),nearest),'pdf_name_parts':{'before':rawnearest,'surname':l['text'][pos:end],'after':suffix},'markers':author_markers(suffix),'affiliation_ids':[],'email':'','orcid':'','corresponding':False,'evidence':evidence([l])}
+        # Some title blocks put numbered affiliation labels before each name
+        # (``1- Name, 2- Name``), so the next author's number can otherwise be
+        # mistaken for the previous author's suffix marker.
+        prefixed=re.match(r'^\s*(\d{1,2})\s*[-–—]\s*',rawnearest)
+        markers=[prefixed[1]] if prefixed else author_markers(suffix)
+        au={'id':f'author-{seq}','global_seq':seq,'given_name':selected_given,'surname':a['surname'],'initials':initials(selected_given),'displayed_name':(selected_given+' '+a['surname']).strip(),'source_text':(rawnearest+' '+l['text'][pos:end]).strip(),'pdf_name_match':compatible_given_name(a.get('given_name',''),nearest),'pdf_name_parts':{'before':rawnearest,'surname':l['text'][pos:end],'after':suffix},'markers':markers,'affiliation_ids':[],'email':'','orcid':'','corresponding':False,'evidence':evidence([l])}
         if alias:au['alias']=alias
         if a.get('suffix'):au['suffix']=a['suffix']
         md['authors'].append(au)
@@ -898,10 +1236,17 @@ def extract_metadata(layout, support, settings):
     named_affiliations,named_links=named_affiliation_statements(layout,md['authors'])
     endmatter_affiliations,endmatter_links=endmatter_author_affiliations(layout,md['authors'])
     md['affiliations'].extend(named_affiliations+endmatter_affiliations)
+    md['affiliations'],affiliation_fragments,affiliation_id_map=merge_affiliation_fragments(md['affiliations'])
+    if affiliation_fragments:
+        issues.append(issue('AFF-018','affiliations',str(len(affiliation_fragments))+' affiliation fragment duplicate(s) were merged into the complete source-backed affiliation; fragment lines remain attached as PDF evidence.',
+                            [e for _,fragment in affiliation_fragments for e in fragment.get('evidence',[])[:1]]))
+    author_name_boxes=apply_geometric_author_markers(layout,md['authors'],[f['marker'] for f in md['affiliations']])
+    for links in (named_links,endmatter_links):
+        for author_id,ids in links.items():links[author_id]=list(dict.fromkeys(affiliation_id_map.get(aff_id,aff_id) for aff_id in ids))
     for author_id,affiliation_ids in endmatter_links.items():named_links.setdefault(author_id,[]).extend(affiliation_ids)
-    printed={f['marker'] for f in md['affiliations'] if f['printed_marker']}
+    printed={marker for f in md['affiliations'] if f['printed_marker'] for marker in f.get('markers',[f['marker']])}
     for a in md['authors']:
-        marker_ids=[f['id'] for f in md['affiliations'] if f['printed_marker'] and f['marker'] in a['markers']]
+        marker_ids=[f['id'] for f in md['affiliations'] if f['printed_marker'] and set(f.get('markers',[f['marker']])) & set(a['markers'])]
         a['affiliation_ids']=list(dict.fromkeys(marker_ids+named_links.get(a['id'],[])))
         a['link_method']='marker' if marker_ids else 'named_statement' if a['affiliation_ids'] else None
         if not a['affiliation_ids'] and len(md['affiliations'])==1 and not md['affiliations'][0]['printed_marker']:
@@ -930,7 +1275,12 @@ def extract_metadata(layout, support, settings):
         for l in p['lines']:
             if l['id'] in used_aff_ids or l['direction'][0]<.8 or SPECIAL_ADDRESS.search(l['text']):continue
             marker,body=front_marker(l['text'],bool(visible_markers & set('abcdef')))
-            if marker in visible_markers and ORG.search(body) and len(body)<230:
+            # Figure/subfigure labels such as ``(a-b)`` can look like an
+            # acronym to the broad organization matcher (which is case
+            # insensitive for mixed-case institutions). Ignore those labels
+            # before proposing an affiliation candidate.
+            candidate_probe=re.sub(r'\([a-z](?:\s*[-,]\s*[a-z])+\)','',body)
+            if marker in visible_markers and ORG.search(candidate_probe) and len(body)<230:
                 candidate=parse_affiliation(body,marker,evidence([l]),True)
                 candidate.update(id='aff-candidate-'+str(len(candidates)+1),text=l['text'],status='UNREVIEWED',location=f'Page {p["number"]}')
                 candidates.append(candidate)
@@ -976,7 +1326,7 @@ def extract_metadata(layout, support, settings):
                 # at the top of the right column. Skip that whole block and
                 # continue until the actual abstract-ending heading.
                 skipped_abstract_blocks.add(l['block']);continue
-            if STOP_HEAD.match(text) or ABSTRACT_END_HEAD.match(text) or re.match(r'^(Key\s*words|Index Terms|Words and Phrases)\s*:',text,re.I):break
+            if STOP_HEAD.match(text) or ABSTRACT_END_HEAD.match(text) or re.match(r'^(?:(?:Author\s+)?Key\s*words?|Index\s*Terms|Words\s+and\s+Phrases)\s*[.:—-]',text,re.I):break
             if not absls:
                 start_bold=l['bold']
             elif last:
@@ -998,15 +1348,19 @@ def extract_metadata(layout, support, settings):
             return (match.group(1)+'(Formula presented) '+match.group(2)) if len(expression)>55 else expression
         md['abstract']=re.sub(r'\b(Hamiltonian\s+)H\s*=\s*[\s\S]*?\b(where\s+J\s+is)\b',
                               replace_complex_hamiltonian,md['abstract'],flags=re.I)
+        md['abstract'],formula_count=replace_complex_display_formulas(absls,md['abstract'])
+        md['abstract_markup']=inline_markup_from_lines(absls,md['abstract'])
+        if formula_count:
+            issues.append(issue('PDF-008','abstract',str(formula_count)+' complex display formula(s) were replaced with “(Formula presented)” because their layout cannot be faithfully represented as inline XML text.',evidence([l for l in absls if is_complex_display_formula(l.get('text',''))][:4])))
     if not md['abstract']:issues.append(issue('ABS-002','abstract','Abstract boundary could not be determined. Select/read the PDF and enter the abstract.'))
     if any(any(s['flags']&1 for s in l['spans']) for l in absls) or re.search(r'[√𝑀𝑞]',md['abstract']):issues.append(issue('PDF-008','abstract','Abstract contains scripts or mathematical layout. Plain-text extraction needs visual review before delivery.',evidence(absls[:1])))
-    keyword_labels=[l for l in horizontal if re.match(r'^(?:Author\s+)?Key\s*words\b',l['text'],re.I)]
+    keyword_labels=[l for l in horizontal if re.match(r'^(?:Author\s+)?Key\s*words?(?:\s+and\s+phrases)?\b|^Index\s*Terms\b',l['text'],re.I)]
     abstract_bottom=max((l['bbox'][3] for l in absls),default=-1)
     after_abstract=[l for l in keyword_labels if l['bbox'][1]>=abstract_bottom]
     keyword_label=after_abstract[-1] if after_abstract else keyword_labels[0] if keyword_labels else None
     if keyword_label:
-        match=re.match(r'^(?:Author\s+)?Key\s*words\s*[:—-]?\s*(.*)$',keyword_label['text'],re.I)
-        raw=match[1].strip() if match else ''
+        match=re.match(r'^(?:Author\s+)?Key\s*words?(?:\s+and\s+phrases)?\s*[.:—-]?\s*(.*)$|^Index\s*Terms\s*[.:—-]?\s*(.*)$',keyword_label['text'],re.I)
+        raw=next((part for part in match.groups() if part is not None),'').strip() if match else ''
         keyword_evidence=[keyword_label]
         if not raw:
             nearby=sorted((x for x in horizontal if x is not keyword_label and -2<=x['bbox'][1]-keyword_label['bbox'][3]<=25 and
@@ -1026,11 +1380,12 @@ def extract_metadata(layout, support, settings):
     for l in horizontal:
         mails=EMAIL_RE.findall(l['text'])
         visible_orcids=[m.upper() for m in ORCID_RE.findall(l['text'])]
-        row_links=[link for p in pages if p['number']==l['page'] for link in p['links']
-                   if ORCID_RE.search(link['uri']) and link['bbox'][1]<=l['bbox'][3] and link['bbox'][3]>=l['bbox'][1]]
-        linked_orcids=[ORCID_RE.search(link['uri'])[1].upper() for link in row_links]
-        orcids=list(dict.fromkeys(visible_orcids+linked_orcids))
-        if not mails and not orcids:continue
+        # A shared baseline is not enough to attach a hyperlink to a line: several
+        # authors and ORCID icons can occupy the same horizontal row. Hyperlinked
+        # ORCIDs are assigned below by nearest surname-word geometry.
+        if not mails and not visible_orcids:continue
+        row_links=[]
+        orcids=list(dict.fromkeys(visible_orcids))
         marks=re.findall(r'[★*∗†‡✉]',l['text'].split(mails[0])[0] if mails else l['text'])
         marker=next((m for m in reversed(marks) if any(m in a['markers'] for a in md['authors'])),None)
         if marker is None:
@@ -1091,12 +1446,17 @@ def extract_metadata(layout, support, settings):
             orcid=m[1].upper()
             row=next((r for r in email_rows if r['line']['page']==p['number'] and any(link is x for x in r['links'])),None)
             if row and row['author_id']:continue
-            near=[a for a in md['authors'] if any(e['page']==p['number'] and abs(e['bbox'][1]-link['bbox'][1])<16 for e in a['evidence'])]
-            if len(near)==1:
-                near[0]['orcid']=orcid;near[0]['orcid_evidence']=[{'page':p['number'],'bbox':link['bbox'],'text':link['uri']}]
+            near=nearest_author_by_pdf_box(md['authors'],author_name_boxes,p['number'],link['bbox'])
+            if near:
+                near['orcid']=orcid;near['orcid_evidence']=[{'page':p['number'],'bbox':link['bbox'],'text':link['uri']}]
             else:issues.append(issue('ORCID-001','authors','ORCID '+orcid+' found in PDF; assign it to the correct author.',[{'page':p['number'],'bbox':link['bbox'],'text':link['uri']}]))
     md['references'],md['coverage'],refissues=extract_references(layout)
     issues.extend(refissues)
+    damaged_reference=[r for r in md['references'] if '\ufffd' in r.get('source_text','')]
+    if damaged_reference:
+        issues.append(issue('PDF-007','references',str(len(damaged_reference))+
+                            ' reference(s) contain an unresolved replacement glyph. Check the PDF image and correct the text before delivery.',
+                            [e for r in damaged_reference for e in r.get('evidence',[])][:4]))
     extra=trailing_affiliation_candidates(layout)
     ref_line_ids={e['line_id'] for r in md['references'] for e in r.get('evidence',[]) if e.get('line_id')}
     candidate_line_ids={e['line_id'] for c in md['affiliation_candidates'] for e in c.get('evidence',[]) if e.get('line_id')}
@@ -1108,6 +1468,21 @@ def extract_metadata(layout, support, settings):
         known={tuple(e.get('text','') for e in c.get('evidence',[])) for c in md['affiliation_candidates']}
         md['affiliation_candidates'].extend(c for c in extra if tuple(e.get('text','') for e in c.get('evidence',[])) not in known)
         issues.append(issue('AFF-017','affiliations',str(len(extra))+' additional affiliation candidate(s) found outside the author block, including after the references. Verify each candidate and link it to an author or mark it as not an original affiliation.',[e for c in extra for e in c['evidence']]))
+    damaged=[]
+    for field in ('title','abstract'):
+        if '\ufffd' in str(md.get(field,'') or ''):
+            damaged.extend(md.get('field_evidence',{}).get(field,[])[:2])
+    if any('\ufffd' in str(value) for value in md.get('keywords',[])):
+        damaged.extend(md.get('field_evidence',{}).get('keywords',[])[:2])
+    for author in md['authors']:
+        if any('\ufffd' in str(author.get(key,'') or '') for key in ('given_name','surname','initials')):
+            damaged.extend(author.get('evidence',[])[:1])
+    for affiliation in md['affiliations']:
+        values=[affiliation.get('source_text',''),affiliation.get('city',''),*affiliation.get('organizations',[]),*affiliation.get('address_parts',[])]
+        if any('\ufffd' in str(value) for value in values):
+            damaged.extend(affiliation.get('evidence',[])[:1])
+    if damaged:
+        issues.append(issue('PDF-007','text','One or more extracted fields contain an unresolved PDF replacement glyph. Check the original PDF image and correct the text before delivery.',damaged[:6]))
     return md,issues
 
 def multiple_works(text):
@@ -1141,6 +1516,14 @@ def reference_line_text(line):
         linked.remove(match[1]);text=text[:match.start()].rstrip(' ,;')
     return text
 
+def is_page_number_artifact(line, page_height):
+    """Recognize isolated page-number ornaments without dropping citation text."""
+    text=str(line.get('text','')).strip()
+    if len(text)>14 or not re.fullmatch(r'[\W_]*\d{1,4}[\W_]*',text,re.UNICODE):
+        return False
+    box=line.get('bbox') or (0,0,0,0)
+    return box[1] < 45 or box[3] > page_height-65
+
 def extract_references(layout):
     issues=[];lines=[]
     trailing_candidates=trailing_affiliation_candidates(layout)
@@ -1149,7 +1532,7 @@ def extract_references(layout):
     for p in layout['pages']:
         for l in p['lines']:
             if l['direction'][0]<.8:continue
-            if re.match(r'^\s*\d+\s*$',l['text']) and (l['bbox'][1]<45 or l['bbox'][3]>p['height']-65):continue
+            if is_page_number_artifact(l,p['height']):continue
             if re.search(r'^MNRAS\s+\d|^This paper has been typeset|^©',l['text']):continue
             lines.append(l)
     headings=[i for i,l in enumerate(lines) if REF_HEAD.match(l['text'].strip())]
@@ -1187,7 +1570,8 @@ def extract_references(layout):
                     if l!=lines[start] and re.match(r'^\[\d+\]',l['text']):break
                     use.append(l)
                 clean=[firsttext]+[reference_line_text(l) for l in use[1:]]
-                candidates.append({'label':str(label),'text':join_text(clean),'evidence':evidence(use),'region':runno+1})
+                candidate_text=join_text(clean)
+                candidates.append({'label':str(label),'text':candidate_text,'evidence':evidence(use),'region':runno+1,'lines':use})
             numbers=[n for _,n,_ in run]
             if numbers!=list(range(numbers[0],numbers[-1]+1)):issues.append(issue('REF-018','references','Source numbering contains gaps. Inspect the reference coverage.'))
         if not headings:issues.append(issue('REF-003','references','A numbered bibliography was found without a References heading. Review its beginning and end.',candidates[0]['evidence'][:1] if candidates else []))
@@ -1204,8 +1588,9 @@ def extract_references(layout):
                 if ri+1==len(keyed_labels) and l['id'].rsplit('-l',1)[0]!=lines[start]['id'].rsplit('-l',1)[0]:break
                 if l!=lines[start] and (STOP_HEAD.match(l['text']) or REF_HEAD.match(l['text'].strip())):break
                 use.append(l)
-            candidates.append({'label':label,'text':join_text([reference_line_text(l) for l in use]),
-                               'evidence':evidence(use),'region':1})
+            candidate_text=join_text([reference_line_text(l) for l in use])
+            candidates.append({'label':label,'text':candidate_text,
+                               'evidence':evidence(use),'region':1,'lines':use})
         issues.append(issue('REF-006','references','Unnumbered references were separated by their printed bracketed citation keys. Review their boundaries.',candidates[0]['evidence'][:1] if candidates else []))
     elif headings:
         start=headings[-1]+1;use=[]
@@ -1223,9 +1608,10 @@ def extract_references(layout):
             is_start=abs(l['bbox'][0]-margin[key])<2 and re.match(r'^[A-ZÀ-Ž]',l['text'])
             if is_start:
                 if current:candidates.append(current)
-                current={'label':None,'text':reference_line_text(l),'evidence':evidence([l]),'region':1}
+                current={'label':None,'text':reference_line_text(l),'evidence':evidence([l]),'region':1,'lines':[l]}
             elif current:
                 current['text']+='\n'+reference_line_text(l);current['evidence']+=evidence([l])
+                current['lines'].append(l)
         if current:candidates.append(current)
         for c in candidates:c['text']=join_text([c['text']])
         issues.append(issue('REF-006','references','Unnumbered references were separated by hanging indentation. Review their boundaries.',candidates[0]['evidence'][:1] if candidates else []))
@@ -1240,7 +1626,7 @@ def extract_references(layout):
         if re.fullmatch(r'(ibid|supra|op\.?\s*cit|loc\.?\s*cit)[.\s]*',c['text'],re.I):excluded.append({'candidate':i,'rule':'REF-009','text':c['text']});continue
         alpha=[x for x in c['text'] if x.isalpha()]
         if alpha and not any('LATIN' in unicodedata.name(x,'') for x in alpha):excluded.append({'candidate':i,'rule':'REF-010','text':c['text']});continue
-        r={'id':f'ref-{i}','seq':len(refs)+1,'candidate_id':f'candidate-{i}','original_label':c['label'],'source_text':c['text'],'full_text':c['text'],'evidence':c['evidence'],'split_from':None,'region':c['region']};refs.append(r)
+        r={'id':f'ref-{i}','seq':len(refs)+1,'candidate_id':f'candidate-{i}','original_label':c['label'],'source_text':c['text'],'full_text':c['text'],'full_text_markup':inline_markup_from_lines(c.get('lines',[]),c['text']),'evidence':c['evidence'],'split_from':None,'region':c['region']};refs.append(r)
         if re.search(r'_{3,}',c['text']):issues.append(issue('REF-015','references','Underscore placeholder in reference '+str(r['seq']),r['evidence'][:1]))
         if multiple_works(c['text']):issues.append(issue('REF-013','references','Possible multiple or stealth works in reference '+str(r['seq'])+'. Separate each evidenced work with Split and preserve the printed text.',r['evidence'][:1]))
     if not refs and not any(i['rule_id']=='REF-002' for i in issues):
@@ -1259,7 +1645,9 @@ def extract_references(layout):
     first_ref_page=min((e['page'] for r in refs for e in r['evidence']),default=0)
     if regions and any(re.search(r'\b(?:19|20)\d{2}\b',f['text']) and f['evidence'][0]['page']<first_ref_page and
                        not any(l['id'] in ref_lines for l in f['evidence']) for f in footnote_references(layout)):regions+=1
-    coverage={'reference_regions':regions,'detected_candidates':len(candidates),'included_candidates':len(refs),'excluded':excluded,'unresolved_candidates':0 if candidates else None,'generated_references':len(refs),'extra_split_parts':0,'numbered_labels':[c['label'] for c in candidates if c['label']], 'printed_label_inventory':[label for _,label in keyed_labels] if headings and len(keyed_labels)>=3 else inventory,'method':method,'reviewed':False}
+    printed_inventory=(inventory if runs else
+                       [label for _,label in keyed_labels] if headings and len(keyed_labels)>=3 else inventory)
+    coverage={'reference_regions':regions,'detected_candidates':len(candidates),'included_candidates':len(refs),'excluded':excluded,'unresolved_candidates':0 if candidates else None,'generated_references':len(refs),'extra_split_parts':0,'numbered_labels':[c['label'] for c in candidates if c['label']], 'printed_label_inventory':printed_inventory,'method':method,'reviewed':False}
     issues.append(issue('REF-018','references','Confirm the reference list is complete against the PDF. Counts are reconciled, but automatic region detection alone cannot certify completeness.'))
     return refs,coverage,issues
 
@@ -1277,6 +1665,21 @@ def verify_metadata(md, settings):
     check('ID-003','base_id',md.get('base_id'),s.get('html_id'),'HTML ID',arxiv_id)
     check('ID-003','version',md.get('version'),s.get('html_version'),'HTML version')
     check('ID-005','base_id',md.get('base_id'),s.get('api_id'),'API ID',arxiv_id)
+    html_id=arxiv_id(s.get('html_id','')) if s.get('html_id') else ''
+    scrap_id=arxiv_id(s.get('scrapping_id','')) if s.get('scrapping_id') else ''
+    html_version=s.get('html_version');scrap_version=s.get('scrapping_version')
+    support_identity_state='NOT_RUN'
+    if html_id and scrap_id:
+        if html_id!=scrap_id:
+            issues.append(issue('ID-006','base_id','HTML and Scrapping IDs disagree; support-file identity is not corroborated.'))
+            support_identity_state='MISMATCH'
+        elif html_version is not None and scrap_version is not None and int(html_version)!=int(scrap_version):
+            issues.append(issue('ID-006','version','HTML and Scrapping versions disagree; support-file version is not corroborated.'))
+            support_identity_state='MISMATCH'
+        else:support_identity_state='MATCH' if html_version is not None and scrap_version is not None else 'PARTIAL_MATCH'
+    decisions.append({'rule_id':'ID-006','field':'support_identity','status':support_identity_state,
+                      'source':'HTML/SCRAPPING cross-check','actual':{'id':html_id,'version':html_version},
+                      'other':{'id':scrap_id,'version':scrap_version}})
     def nt(t):
         t=norm(t)
         if settings.get('equivalent_dashes'):t=re.sub(r'\s*(?:—|–|--)\s*',' — ',t)
@@ -1361,8 +1764,7 @@ def build_xml(md, timestamp=None):
     def affiliation(parent,a):
         el=e(parent,'affiliation')
         for org in a.get('organizations',[]):e(el,'organization',org)
-        # The receiving REDCAR validator does not permit address-part inside
-        # affiliation. The complete printed affiliation remains in source-text.
+        for part in a.get('address_parts',[]):e(el,'address-part',part)
         for key,tag in [('city','city'),('state','state'),('postal_code','postal-code')]:
             if a.get(key):e(el,tag,a[key])
         if a.get('country_code'):e(el,'country',**{'iso-code':a['country_code']})

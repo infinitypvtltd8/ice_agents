@@ -109,6 +109,8 @@ Count canonical authors, not serialized occurrences. For 2408.09673 the correct 
 
 State dictionaries must be country-specific. The brief's two-letter wording cannot be implemented as a global length constraint: the supplied Australian affiliations use NSW and ACT. India/Kerala in 2408.09763 demonstrates an address-part rather than state. `ce` is a namespace prefix in the examples, not a separate affiliation component named ce.
 
+When one comma-delimited source chunk joins institutions with “and” or “&”, split it into separate ordered `organization` elements only when both sides independently identify institutions. Preserve acronym institutions such as JILA as organizations. Parse a US ZIP+4 (`80309-0440`) as one `postal-code`, then recover the preceding state and city without shifting `Boulder` into `address-part`.
+
 ### 7.3 Correspondence decision table
 
 | Situation | Decision |
@@ -117,6 +119,8 @@ State dictionaries must be country-specific. The brief's two-letter wording cann
 | One author with neither and no explicit correspondence text | Not corresponding; unexplained marker alone does not change this. |
 | Explicit correspondence text linked to an author | Corresponding, including an author without other contact fields. |
 | Multiple authors; author-attached marker clearly means correspondence | Corresponding. |
+| Single author-side `*` beside the author, with no conflicting marker meaning | Apply the configured single-star cue. Keep `**` as a distinct doubled footnote marker; never collapse it into `*` or use it alone to create another correspondence person. |
+| Asterisk markers repeat as per-author email footnote labels, without an explicit correspondence statement | Preserve each email association; do not multiply correspondence entries from `*` and `**` being treated as the same symbol. |
 | Marker explicitly means equal contribution/current address/other purpose | Not corresponding on that evidence. |
 | Star belongs only to email or affiliation | Not corresponding on that evidence. |
 | Marker meaning or identity association unresolved | HOLD, retain evidence, human decision available. |
@@ -471,3 +475,9 @@ Consequence is the default issue severity on failure. These rules do not make HO
 `MASTER_BUILD_PROMPT.txt` supplies the implementation handoff and includes the complete original brief verbatim. `rules/rule_catalog.json` contains numbered contracts; `xml/xml_profile.json` contains the namespace/field/order map and observed inventory; `model/data_contract.json` defines the evidence/revision model; `tests/acceptance_cases.json` contains implementation tests to build; `audit/` records what was actually inspected and unresolved sample issues. All three original attachments are bundled unchanged under `attachments/` with SHA-256 entries in `MANIFEST.json`.
 
 No application has been built, no source/expected XML has been modified, and no runtime performance or official XSD pass is claimed by this deliverable.
+
+## Current runtime policy and extraction corrections
+
+The operator policy for this local application supersedes any older design text below that describes HOLD states or gated export: all verification findings remain informational notes and never block metadata save, XML generation, or XML export. Technical validation results are still reported accurately; an unverified XML must not be described as officially schema-valid.
+
+When a PDF has no arXiv stamp, the runtime accepts an ID/version from support files only after an exact normalized PDF/HTML title match, matching HTML and Scrapping IDs, and agreement among all versions that are present. Otherwise it leaves the identity unset and records a note. Author-affiliation labels are read before or after author names; author groups follow affiliation order. Affiliation parsing preserves every supported institution and street address, separates UK postcodes from cities, and writes the local profile-defined XML sequence. These are deterministic rules; they do not use AI or external bibliographic lookup.

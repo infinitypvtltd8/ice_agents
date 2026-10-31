@@ -607,7 +607,7 @@
       ],
       "basis": "Brief 9,35",
       "handler": "id_006",
-      "handler_contract": "Retain all candidates and reject silent latest-version replacement; missing version is not v1.",
+      "handler_contract": "Retain all source ID/version candidates. If the PDF stamp is absent, accept support identity only when normalized PDF and HTML titles match exactly, HTML and Scrapping base IDs agree, and every version present agrees. If any check fails, leave unsupported fields unset and create an informational note; a missing version is not v1.",
       "conditions": {
         "type": "handler_defined",
         "contract": "ID-006"
@@ -793,7 +793,7 @@
       ],
       "basis": "Brief 9",
       "handler": "key_001",
-      "handler_contract": "Recognize configured keyword labels including Key words; missing keywords are absent, not invented from API categories.",
+      "handler_contract": "Recognize PDF Keywords/Key words labels with a following period, colon, dash or em dash. Keep keyword text separate from the abstract and remove the label punctuation from the first keyword.",
       "conditions": {
         "type": "handler_defined",
         "contract": "KEY-001"
@@ -1074,7 +1074,7 @@
       ],
       "basis": "Brief 9,13",
       "handler": "aff_002",
-      "handler_contract": "Create author-affiliation edges from author-attached markers and matching affiliation markers; store both endpoint evidence.",
+      "handler_contract": "Map affiliation labels printed before or after an author name. A numeric label followed by comma or period starts the affiliation line. Do not treat the next author’s prefix as the preceding author’s suffix; preserve source evidence for each edge.",
       "conditions": {
         "type": "handler_defined",
         "contract": "AFF-002"
@@ -1199,7 +1199,7 @@
       ],
       "basis": "Brief 11",
       "handler": "aff_007",
-      "handler_contract": "Store organizations as an ordered array and address components separately; retain exact source wording in source_text.",
+      "handler_contract": "Store all source-supported organizations in PDF order, including acronym-bearing named groups, and address components separately. Parse street/location lines (including Chemin) as address-part, distinguish UK postcodes from cities, and retain exact source wording in source_text.",
       "conditions": {
         "type": "handler_defined",
         "contract": "AFF-007"
@@ -3179,5 +3179,12 @@
       "parameters": {},
       "status": "SPECIFIED_NOT_IMPLEMENTED"
     }
-  ]
+  ],
+  "effective_runtime_policy": {
+    "review_findings": "INFORMATIONAL_ONLY",
+    "blocks_metadata_save": false,
+    "blocks_xml_generation": false,
+    "blocks_xml_export": false,
+    "note": "The per-rule on_failure severities describe the design catalogue; the current local workflow has no HOLD state and applies this nonblocking runtime override."
+  }
 }

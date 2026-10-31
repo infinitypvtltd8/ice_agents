@@ -96,7 +96,8 @@ class RuleTest(unittest.TestCase):
             self.assertIsNone(check(key), key)
 
     def test_id_and_version(self):
-        self.assertTrue(check('id_missing', front=TITLE[1:] + AUTHOR + ABSTRACT))
+        self.assertTrue(check('id_missing', front=TITLE[1:] + AUTHOR + ABSTRACT,
+                              support={'html_id':'','scrapping_id':'','html_title':''}))
         self.assertIn('Scrapping version 2', check('id_version_mismatch', support={'scrapping_version': 2}))
         self.assertIn('HTML ID 2609.99999', check('id_version_mismatch', support={'html_id': '2609.99999'}))
         self.assertIsNone(check('id_version_mismatch', support={'scrapping_id': 'arXiv:2609.12345v1'}))

@@ -49,6 +49,55 @@ class StampTest(unittest.TestCase):
         checked = engine.verify_metadata(md, {})[0]
         self.assertTrue(any(i['rule_id'] == 'ID-002' and i['field'] == 'version' for i in checked))
 
+
+class TextFidelityTest(unittest.TestCase):
+    def test_xml_forbidden_pdf_controls_are_replaced_with_review_glyph(self):
+        cleaned,count=engine.xml10_text('reference\x12 title')
+        self.assertEqual(cleaned,'reference\ufffd title')
+        self.assertEqual(count,1)
+
+    def test_unheaded_abstract_acronym_is_not_misread_as_an_affiliation(self):
+        rows=[(40,'Effect of a flow on active particles',16),(75,'Ada Lovelace',12),
+              (92,'Department of Physics, University of Example, London, UK',9),
+              (120,'We simulate active Brownian particles (ABPs) with soft interactions in a flow.',9),
+              (132,'The results show that these particles remain mixed in the measured regime.',9),
+              (150,'Keywords: active matter, ABPs, flow',8),(180,'1. Introduction',12)]
+        md,_,_=extract([rows],ADA)
+        self.assertIn('We simulate active Brownian particles (ABPs)',md['abstract'])
+        self.assertIn('The results show',md['abstract'])
+        self.assertEqual(len(md['affiliations']),1)
+
+    def test_known_accent_glyphs_are_recombined_and_normalized(self):
+        self.assertEqual(engine.join_text(['P´erez and École']), 'Pérez and École')
+
+    def test_superscript_is_added_only_when_pdf_span_maps_exactly(self):
+        line={'text':'x2','bbox':[0,0,20,10],'size':10,'spans':[
+            {'text':'x','bbox':[0,0,8,10],'size':10,'flags':0},
+            {'text':'2','bbox':[9,0,13,7],'size':7,'flags':1},
+        ]}
+        self.assertEqual(engine.inline_markup_from_lines([line],'x2'),'x<sup>2</sup>')
+        self.assertEqual(engine.inline_markup_from_lines([line],'x²'),'')
+
+    def test_unicode_and_inline_scripts_survive_generated_xml(self):
+        md,_,_=extract([FRONT],ADA)
+        md['title']='École x2';md['title_markup']='École x<sup>2</sup>'
+        md['abstract']='Résumé naïve x2';md['abstract_markup']='Résumé naïve x<sup>2</sup>'
+        root=engine.secure_xml(engine.build_xml(md).encode('utf-8'))
+        title=root.xpath('//*[local-name()="titletext"]')[0]
+        abstract=root.xpath('//*[local-name()="para"]')[0]
+        self.assertEqual(''.join(title.itertext()),'École x2')
+        self.assertEqual(''.join(abstract.itertext()),'Résumé naïve x2')
+        self.assertEqual(len(abstract.xpath('.//*[local-name()="sup"]')),1)
+
+    def test_formula_placeholder_requires_dense_standalone_equation(self):
+        formula='H = ∑ x + ∫ y = ∇z ≤ 2'
+        self.assertTrue(engine.is_complex_display_formula(formula))
+        prose='We use x = y in this simple example.'
+        self.assertFalse(engine.is_complex_display_formula(prose))
+        lines=[{'text':formula}]
+        self.assertEqual(engine.replace_complex_display_formulas(lines,'Before. '+formula+' After.'),
+                         ('Before. (Formula presented) After.',1))
+
     def test_support_ids_compare_without_prefix_or_version(self):
         md, _, _ = extract([FRONT], ADA)
         md['source_values'].update(scrapping_id='arXiv:2609.12345v1', scrapping_version=1, html_id='2609.12345')
@@ -59,7 +108,56 @@ class StampTest(unittest.TestCase):
         self.assertTrue(any(i['rule_id'] == 'ID-002' and 'mismatch' in i['message'] for i in checked))
 
 
+class CorroboratedIdentityTest(unittest.TestCase):
+    def test_missing_pdf_stamp_uses_support_identity_only_after_exact_title_match(self):
+        support={
+            'html_title':'An article title', 'html_id':'arXiv:2609.12345',
+            'html_version':None, 'scrapping_id':'2609.12345',
+            'scrapping_version':2, 'api_id':'2609.12345',
+        }
+        md,issues,_=extract([FRONT[1:]],ADA,support)
+        self.assertEqual((md['base_id'],md['version']),('2609.12345',2))
+        self.assertEqual(md['id_capture_source'],'HTML + SCRAPPING; PDF/HTML title match')
+        self.assertNotIn('ID-004',rules(issues))
+
+    def test_missing_stamp_does_not_use_ids_when_pdf_and_html_titles_differ(self):
+        support={
+            'html_title':'A different article title', 'html_id':'2609.12345',
+            'scrapping_id':'2609.12345', 'scrapping_version':1,
+        }
+        md,issues,_=extract([FRONT[1:]],ADA,support)
+        self.assertEqual((md['base_id'],md['version']),('',None))
+        self.assertIn('ID-004',rules(issues))
+
+    def test_missing_stamp_does_not_use_conflicting_support_versions(self):
+        support={
+            'html_title':'An article title', 'html_id':'2609.12345',
+            'html_version':2, 'scrapping_id':'2609.12345',
+            'scrapping_version':1,
+        }
+        md,issues,_=extract([FRONT[1:]],ADA,support)
+        self.assertEqual((md['base_id'],md['version']),('',None))
+        self.assertIn('ID-004',rules(issues))
+
+
 class ReferenceRegionTest(unittest.TestCase):
+    def test_reference_extraction_ignores_glyph_wrapped_page_footer(self):
+        rows = [(100, 'References', 12), (125, '[1] Doe J. First sample work. Journal 2021.', 10),
+                (145, '[2] Roe K. Second sample work. Journal 2022 [2401.12345].', 10),
+                (165, '[3] Poe E. Third sample work. Journal 2023.', 10), (780, '- 38 -', 10)]
+        md, _, _ = extract([FRONT, rows], ADA)
+        self.assertEqual(len(md['references']), 3)
+        self.assertTrue(all('38' not in r['source_text'] for r in md['references']))
+        self.assertEqual(md['coverage']['printed_label_inventory'], ['1','2','3'])
+
+    def test_trace_recovers_a_replacement_character_only_when_aligned(self):
+        text='It\ufffd, Stratonovich'
+        glyphs=[(ord(c),0,None,(0,0,1,1)) for c in 'Itô,Stratonovich']
+        trace=[{'font':'Italic','bbox':(0,0,20,10),'chars':glyphs}]
+        self.assertEqual(engine.recover_glyph_text(text,(0,0,20,10),'Italic',trace),
+                         'Itô, Stratonovich')
+        self.assertEqual(engine.recover_glyph_text(text,(0,0,20,10),'Other',trace),text)
+
     def test_early_numbered_list_does_not_hide_the_bibliography(self):
         body = FRONT + [(300, '[1] first numbered point in the text', 10), (315, '[2] second numbered point', 10),
                         (330, '[3] third numbered point', 10)]
@@ -80,7 +178,9 @@ class ReferenceRegionTest(unittest.TestCase):
 
 class OrcidTest(unittest.TestCase):
     def test_orcid_link_is_assigned_only_on_the_authors_page(self):
-        same_page = [(1, (200, 100, 215, 114), 'https://orcid.org/0000-0002-1825-009x')]
+        # Place the clickable ORCID icon just after the printed author name;
+        # far-away links must remain unassigned rather than being guessed.
+        same_page = [(1, (126, 100, 140, 114), 'https://orcid.org/0000-0002-1825-009x')]
         md, issues, _ = extract([FRONT], ADA, links=same_page)
         self.assertEqual(md['authors'][0]['orcid'], '0000-0002-1825-009X')
         other_page = [(2, (200, 100, 215, 114), 'https://orcid.org/0000-0002-1825-0097')]

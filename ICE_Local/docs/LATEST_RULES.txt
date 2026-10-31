@@ -971,3 +971,43 @@ Author identity: retain API author order as comparison evidence. Expand initials
 Author group sequence: order groups by affiliation appearance and retain each author's global sequence when the author appears in more than one group. Keep an unlinked author visible rather than dropping them.
 
 
+
+SUPPLEMENTAL OPERATIONAL RULES — 30 OCT 2026
+
+Identity when the PDF stamp is absent
+- Do not invent an arXiv ID/version from the ZIP name or select the newest version.
+- Compare the PDF title with the HTML title after only harmless whitespace, case, NFC, and explicitly excluded title-markup cleanup. Punctuation, words, numbers, and diacritics must remain equivalent; accent-folded or topic-overlap matches are not exact identity matches.
+- Only when PDF and HTML titles match, HTML and Scrapping base IDs agree, and every version present agrees may the corroborated ID/version be written to XML. If HTML omits a version, use a Scrapping version only when the IDs and titles match and no other version conflicts.
+- If a check fails or a source value is missing, retain the evidence and make an informational note. Leave unsupported identity fields blank. Never block metadata save, XML generation, or XML export.
+
+Author order and affiliation groups
+- Numbered labels may precede the author name (for example, `1- Niloofar Nobahari, 2- Alireza Rezaee`) or follow the name. Read a prefix label as that author's marker; do not attach the next author's prefix to the preceding author.
+- A comma or period after an affiliation marker is a label delimiter (`1, Department...`, `1. Department...`), not part of the institution name.
+- Build groups in the order affiliations appear. Link every author only to the printed marker(s) or explicit author-affiliation statement. Keep the global author sequence stable; do not emit an extra affiliation-only group when a valid author link exists.
+- Read raised number/letter and correspondence-marker spans from PDF geometry, including markers that sit after one name but are detached into a neighboring text line. Match each marker to the closest surname word on that author line before creating affiliation links; never use a whole-line box to decide which author owns a superscript.
+- For ORCID hyperlinks, extract the ORCID identifier from the PDF link target and associate it with the closest surname word by page and coordinates. A shared baseline is not enough to associate every link with every author.
+- Treat the printed Unicode star `★` as an author-side star for the correspondence rule when its location is tied to the author; keep doubled asterisks distinct and honor an explicit note that gives the symbol another meaning.
+- Before constructing or parsing XML markup from PDF text, replace characters forbidden by XML 1.0 with U+FFFD and record their PDF locations as a review note. Keep surrounding text and continue extraction; never let one invalid glyph abort the article.
+- For addresses printed after the references, do not link every author named in a shared preceding name line to every nearby address. Link an address to the uniquely identifiable author when its nearby email contains that author's name; if the email cannot uniquely identify an author and the name line lists multiple authors, leave the affiliation link unresolved for review.
+- Preserve author and affiliation evidence, including marker text and page/box locations. If markers cannot be distinguished, retain a review note rather than silently linking both authors to the same group.
+
+Affiliation components
+- Keep every named institution in source order, including consortia and named research groups/programs that contain a short acronym, such as `Cosmology, Universe and Relativity at Louvain (CURL)`.
+- Separate a printed street/location line such as `2 Chemin du Cyclotron` into one `address-part`; do not duplicate the city. Keep the full original wording in `ce:source-text`.
+- Recognize UK postcodes such as `LA1 4YB` separately from the city (`Lancaster`). Parse numeric postal code before a following city (`1348 Louvain-la-Neuve`) as postal code `1348` and city `Louvain-la-Neuve`.
+- Treat job titles such as PhD Student or Associate Professor as source-text details, not cities or address parts. Preserve them in the full source text.
+- Emit only components supported by the PDF. Keep country names as three-letter ISO country codes in XML. For USA, Canada, and Australia, use the required state/province code in the state element.
+
+Keywords, references, and XML output
+- Recognize a period, colon, dash, or em dash after a `Key words`/`Keywords` label. End abstract capture before that label and write each printed keyword to `author-keyword`; do not leave the label punctuation attached to the first keyword.
+- Preserve each reference as printed, in PDF order, with its original source text and markup. Do not complete, rewrite, or enrich citations from outside the supplied package.
+- Generate author groups and affiliation children from the corrected canonical metadata. Keep source text, organizations, address parts, city, state, postal code, and country in the profile-defined order. Run local well-formedness/profile checks; do not claim official XSD validation when no client XSD was supplied.
+- Validation and matching findings are informational review notes. They never block saving metadata, generating XML, or exporting XML.
+
+ENGINE CLARIFICATION — 31 OCT 2026
+- Always serialize the article title as <citation-title><titletext>…</titletext></citation-title>.
+- Serialize affiliations inside each ordered author-group using affiliation/organization/address-part/city/state/postal-code/country elements and retain the complete source wording in ce:source-text.
+- Build automatic author groups in the PDF affiliation order. Link each author only to affiliations supported by that author's printed marker or explicit PDF statement. Keep the author's global seq when the author belongs to more than one group.
+- Preserve the count and identity of author-side symbols. A single * can follow the configured correspondence rule; ** is a distinct doubled footnote mark and must not be collapsed into * to create another correspondence entry. Match each email to its author independently.
+- Keep unresolved author/affiliation or correspondence links as review notes; retain editable XML generation and export.
+- Preserve source order for coordinated institution names: split “and”/“&” into separate organization tags only when both sides are independently identifiable institutions; recognized acronym institutions such as JILA are organizations. Parse US ZIP+4 such as 80309-0440 as one postal-code and keep Boulder as city and CO as state.

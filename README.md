@@ -1,6 +1,6 @@
 # infinity-ACE
 
-OCR Tool. **ICE Local 1.3.0** is a local citation extraction app. Files are processed entirely on your own computer: no AI/LLM calls and no internet needed to process them. No login or internet connection is needed for the local workspace.
+OCR Tool. **ICE Local 1.4.5** is a citation extraction app. In local mode, files are processed on your own computer: no AI/LLM calls and no internet needed to process them. No login or internet connection is needed for the local workspace.
 
 This is a bundled Python application. There is no `npm install` or `npm start` step.
 
@@ -19,13 +19,17 @@ The repo includes a portable 64-bit Python 3.12.10 runtime with all required lib
 
 The app can also run as a shared Replit Reserved VM deployment. It requires an `ICE_ACCESS_PASSWORD` deployment secret before it will bind to the public network. See [`REPLIT_DEPLOYMENT.md`](REPLIT_DEPLOYMENT.md) for setup, access, and data-retention details. Local Windows/macOS/Linux use remains available as described below.
 
+## Vercel hosting
+
+This app is not a drag-and-drop Vercel deployment. It runs a persistent Python web server, background PDF workers, and stores job/source files on disk. Vercel Functions use per-request serverless execution; a Vercel version would need a redesigned API plus durable storage and a separate job worker. For a shared working app today, use the existing Replit Reserved VM configuration in `REPLIT_DEPLOYMENT.md`.
+
 ### 1. Clone the repository
 
 Clone into a short folder path such as `C:\ICE`:
 
 ```powershell
 cd C:\
-git clone https://github.com/PasaniFusion/infinity-ACE.git ICE
+git clone https://github.com/infinitypvtltd8/ice_agents.git ICE
 cd ICE
 ```
 

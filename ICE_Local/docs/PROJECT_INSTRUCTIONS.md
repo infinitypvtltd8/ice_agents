@@ -1,6 +1,6 @@
 # ICE Local — project instructions
 
-Version: 1.3.0. This folder is the complete local citation extraction application, including the bundled 64-bit Windows Python runtime in `runtime/`. Read `QUEUE_DEFINITIONS_AND_VERIFICATION.md` for the matching checks and observed fixtures.
+Version: 1.4.1. This folder is the complete local citation extraction application, including the bundled 64-bit Windows Python runtime in `runtime/`. Read `QUEUE_DEFINITIONS_AND_VERIFICATION.md` for the matching checks and observed fixtures.
 
 ## Goal and boundary
 
@@ -23,9 +23,10 @@ The application writes `data/jobs/<id>/job.json`, original sources, `extraction.
 
 1. `documents.py` recognizes content, expands nested ZIPs safely, associates each source to one package/article, and reports skipped or ambiguous files.
 2. `engine.py` extracts PDF pages, lines, spans, words and bounding boxes; local Tesseract can be configured for scanned/garbled text. Native text is not duplicated when OCR replaces an unreliable layer. XML/HTML supports are parsed structurally into a feeder. The original PDF remains authoritative.
-3. `engine.py` derives candidate metadata, affiliation components and author groups from original PDF evidence, including printed markers, explicit author-named affiliation statements, and clearly adjacent end-matter author/address blocks. It preserves uncertain candidates and issues instead of using correspondence/support data to manufacture missing original affiliations.
-4. `engine.build_xml` creates XML automatically before a job becomes READY. `engine.validate_xml` checks well-formedness and sample-profile invariants. `triage.py` always keeps the file in **General** and records matching and safety findings for review. Official client XSD validation is **not run**, because no client XSD was supplied.
-5. `app.py` persists edits, audit events, revisions, exports, and clear actions. The browser UI in `static/` shows PDF/source evidence and editable metadata.
+3. `engine.py` derives candidate metadata, affiliation components and author groups from original PDF evidence, including printed markers before or after author names, explicit author-named affiliation statements, and clearly adjacent end-matter author/address blocks. Preserve every ordered organization, street/address part, locality, state/province, postal code, and country code that the PDF supports. Keep the full source wording and evidence. Do not create empty/orphan author groups when a printed marker maps the author to an affiliation.
+4. When the PDF has no ID/version stamp, accept an ID only if the normalized PDF title exactly matches the HTML title, the HTML and Scrapping IDs agree, and all versions that are present agree. Use the corroborated version only when present. Otherwise leave the ID/version unset and add a review note; never guess from the package filename or choose the newest version. These identity notes do not block XML generation or export.
+5. `engine.build_xml` creates XML automatically before a job becomes READY. `engine.validate_xml` checks well-formedness and sample-profile invariants. `triage.py` always keeps the file in **General** and records matching and safety findings for review. Official client XSD validation is **not run**, because no client XSD was supplied.
+6. `app.py` persists edits, audit events, revisions, exports, and clear actions. The browser UI in `static/` shows PDF/source evidence and editable metadata.
 
 ## Review and delivery
 

@@ -26,6 +26,59 @@ class AffiliationTest(unittest.TestCase):
             layout, _ = engine.extract_layout(pdf, {})
         return engine.extract_metadata(layout, {'api_authors': authors}, {})[0]
 
+    def test_endmatter_emails_link_each_affiliation_to_one_author(self):
+        authors=[
+            {'id':'author-1','given_name':'Shilei','surname':'Fan','email':''},
+            {'id':'author-2','given_name':'Bochen','surname':'Liu','email':''},
+        ]
+        texts=[
+            'SHILEI FAN AND BOCHEN LIU',
+            'School of Mathematics and Statistics, Central China Normal University, Wuhan 430079, China',
+            'Email address: slfan@ccnu.edu.cn',
+            'Department of Mathematics, Southern University of Science and Technology, Shenzhen 518055, China',
+            'Email address: Bochen.Liu1989@gmail.com',
+        ]
+        lines=[{'page':2,'bbox':[10,20+i*12,500,30+i*12],'id':f'p2-l{i}','text':text} for i,text in enumerate(texts)]
+        affiliations,links=engine.endmatter_author_affiliations({'pages':[{'lines':[]},{'lines':lines}]},authors)
+        self.assertEqual(links['author-1'],['aff-endmatter-1'])
+        self.assertEqual(links['author-2'],['aff-endmatter-2'])
+        self.assertEqual([author['email'] for author in authors],['slfan@ccnu.edu.cn','Bochen.Liu1989@gmail.com'])
+
+    def test_detached_superscripts_and_orcid_links_use_surname_geometry(self):
+        authors=[
+            {'id':'author-1','surname':'Chan','evidence':[{'line_id':'p1-b1-l0'}]},
+            {'id':'author-2','surname':'Chashkina','evidence':[{'line_id':'p1-b1-l1'}]},
+            {'id':'author-3','surname':'Bromberg','evidence':[{'line_id':'p1-b1-l1'}]},
+        ]
+        lines=[
+            {'id':'p1-b1-l0','page':1,'block':1,'text':'Ho-Sang Chan','bbox':[0,20,50,32],
+             'spans':[{'text':'1','bbox':[53,17,57,26],'flags':1}]},
+            {'id':'p1-b1-l1','page':1,'block':1,'text':'Anna Chashkina Omer Bromberg','bbox':[60,20,180,32],
+             'spans':[{'text':'2','bbox':[120,17,124,26],'flags':1},{'text':'3','bbox':[183,17,187,26],'flags':1}]},
+        ]
+        words=[
+            {'text':'Chan','bbox':[25,20,50,32],'block':1,'line':0},
+            {'text':'Chashkina','bbox':[90,20,120,32],'block':1,'line':1},
+            {'text':'Bromberg','bbox':[150,20,180,32],'block':1,'line':1},
+        ]
+        links=[{'bbox':[51,19,59,33],'uri':'https://orcid.org/0000-0001-2345-6789'}]
+        layout={'pages':[{'number':1,'lines':lines,'words':words,'links':links}]}
+        boxes=engine.apply_geometric_author_markers(layout,authors,['1','2','3'])
+        self.assertEqual([author['markers'] for author in authors],[['1'],['2'],['3']])
+        self.assertEqual(engine.nearest_author_by_pdf_box(authors,boxes,1,links[0]['bbox'])['id'],'author-1')
+
+    def test_uc_berkeley_affiliations_are_individual_and_split(self):
+        md=self.pdf_metadata([
+            (75,'Efficient Mass Matrix Estimation with Gaussian Cooling',16),
+            (105,'Jake Hofgard1, Michael Lindsey2',12),
+            (135,'1 UC Berkeley, hofgard@berkeley.edu',9),
+            (150,'2 UC Berkeley and Lawrence Berkeley National Laboratory, lindsey@math.berkeley.edu',9),
+            (200,'Abstract',11),(215,'A sufficiently long paragraph begins the paper and explains the method.',10),
+        ],[{'given_name':'Jake','surname':'Hofgard'},{'given_name':'Michael','surname':'Lindsey'}])
+        self.assertEqual([a['markers'] for a in md['authors']],[['1'],['2']])
+        self.assertEqual([a['affiliation_ids'] for a in md['authors']],[['aff-1'],['aff-2']])
+        self.assertEqual([f['organizations'] for f in md['affiliations']],[['UC Berkeley'],['UC Berkeley','Lawrence Berkeley National Laboratory']])
+
     def test_alpha_labels_create_groups_with_pdf_evidence(self):
         md = self.pdf_metadata([
             (75, 'An article title', 16),
@@ -62,6 +115,17 @@ class AffiliationTest(unittest.TestCase):
             'Example University, Boulder, Colorado 80301, USA','1',[])
         self.assertEqual((aff['city'],aff['state'],aff['postal_code']),
                          ('Boulder','CO','80301'))
+
+    def test_jila_coordinated_institutions_and_us_zip_plus_four_follow_source_order(self):
+        source=('JILA, University of Colorado and National Institute of Standards and Technology, '
+                '440 UCB, Boulder, CO 80309-0440, USA')
+        aff=engine.parse_affiliation(source,'1',[])
+        self.assertEqual(aff['organizations'],[
+            'JILA','University of Colorado','National Institute of Standards and Technology'])
+        self.assertEqual(aff['address_parts'],['440 UCB'])
+        self.assertEqual((aff['city'],aff['state'],aff['postal_code'],aff['country_code']),
+                         ('Boulder','CO','80309-0440','USA'))
+        self.assertEqual(aff['source_text'],source)
 
     def test_university_name_is_not_country_and_macau_sar_uses_autonomous_code(self):
         aff=engine.parse_affiliation(
@@ -171,6 +235,39 @@ class AffiliationTest(unittest.TestCase):
         ],[{'given_name':'Courtney L.','surname':'Crawford'}])
         self.assertEqual(len(md['authors']),1)
         self.assertEqual(md['authors'][0]['markers'],['1','*'])
+
+    def test_single_star_correspondence_does_not_promote_double_star_email_marker(self):
+        lines=[
+            {'id':'author-1','page':1,'text':'Ioannis Iatrakis 1,*','bbox':[50,100,260,112]},
+            {'id':'author-2','page':1,'text':'Frank de Groot 3,**','bbox':[50,120,250,132]},
+            {'id':'email-1','page':1,'text':'* ioannis.iatrakis@example.org','bbox':[50,700,300,710]},
+            {'id':'email-2','page':1,'text':'** frank.degroot@example.org','bbox':[50,720,300,730]},
+        ]
+        authors=[
+            {'id':'author-1','global_seq':1,'given_name':'Ioannis','surname':'Iatrakis',
+             'initials':'I.','markers':['1','*'],'email':'ioannis.iatrakis@example.org',
+             'affiliation_ids':[],'corresponding':False,
+             'evidence':[{'line_id':'author-1','text':lines[0]['text']}]},
+            {'id':'author-2','global_seq':2,'given_name':'Frank','surname':'de Groot',
+             'initials':'F.','markers':['3','*','*'],'email':'frank.degroot@example.org',
+             'affiliation_ids':[],'corresponding':False,
+             'evidence':[{'line_id':'author-2','text':lines[1]['text']}]},
+        ]
+        engine.apply_correspondence_rules({'authors':authors},{'pages':[{'lines':lines}]})
+        self.assertTrue(authors[0]['corresponding'])
+        self.assertFalse(authors[1]['corresponding'])
+        self.assertEqual(engine.author_markers('3,**'),['3','*','*'])
+
+        metadata={'base_id':'2610.04797','version':1,'title':'Sample article title',
+                  'abstract':'Sample abstract text','authors':authors,
+                  'affiliations':[],'author_groups':[],'keywords':[],'references':[],
+                  'profile':{}}
+        root=engine.secure_xml(engine.build_xml(metadata).encode('utf-8'))
+        self.assertEqual(len(root.xpath('.//*[local-name()="titletext"]')),1)
+        self.assertEqual(len(root.xpath('.//*[local-name()="title"]')),0)
+        correspondences=root.xpath('.//*[local-name()="correspondence"]')
+        self.assertEqual(len(correspondences),1)
+        self.assertEqual(correspondences[0].xpath('string(.//*[local-name()="surname"])'),'Iatrakis')
 
     def test_collective_pdf_author_is_preserved_when_api_lists_people(self):
         md=self.pdf_metadata([
@@ -318,6 +415,44 @@ class AffiliationTest(unittest.TestCase):
             _,issues=engine.extract_metadata(layout,{'api_authors':[{'given_name':'Ada','surname':'Lovelace'}]}, {})
         self.assertIn('KEY-001',[i['rule_id'] for i in issues])
 
+    def test_keyword_and_phrases_is_a_label_not_a_keyword(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),(102,'Ada Lovelace1',12),
+            (145,'1 Department of Mathematics, Paris, France',9),
+            (180,'Abstract',11),(195,'This article has a sufficiently long abstract paragraph for testing the full keyword label.',10),
+            (235,'Key words and phrases: oscillatory integral; Fourier frame',9),
+        ],[{'given_name':'Ada','surname':'Lovelace'}])
+        self.assertEqual(md['keywords'],['oscillatory integral','Fourier frame'])
+
+    def test_dutch_postcodes_and_weg_street_addresses_parse_separately(self):
+        examples=[
+            ('Materials and Structural Analysis Division, Thermo Fisher Scientific, Achtseweg Noord 5, 5651 GG, Eindhoven, The Netherlands',
+             ['Materials and Structural Analysis Division','Thermo Fisher Scientific'],['Achtseweg Noord 5'],'Eindhoven','5651 GG'),
+            ('MESA+ Institute, Faculty of Science and Technology, University of Twente, 7500 AE Enschede, The Netherlands',
+             ['MESA+ Institute','Faculty of Science and Technology','University of Twente'],[],'Enschede','7500 AE'),
+            ('Debye Institute for Nanomaterials Science, Utrecht University, Universiteitsweg 99, 3584 CG, Utrecht, The Netherlands',
+             ['Debye Institute for Nanomaterials Science','Utrecht University'],['Universiteitsweg 99'],'Utrecht','3584 CG'),
+        ]
+        for source,organizations,address,city,postal in examples:
+            with self.subTest(source=source):
+                parsed=engine.parse_affiliation(source,'1',[],False)
+                self.assertEqual(parsed['organizations'],organizations)
+                self.assertEqual(parsed['address_parts'],address)
+                self.assertEqual(parsed['city'],city)
+                self.assertEqual(parsed['postal_code'],postal)
+                self.assertEqual(parsed['country_code'],'NLD')
+
+    def test_trailing_duplicate_affiliation_fragment_merges_only_with_complete_match(self):
+        complete=engine.parse_affiliation('School of Mathematics, Central China Normal University, Wuhan 430079, China','1',[{'line_id':'full'}],True)
+        fragment=engine.parse_affiliation('mal University, Wuhan 430079, China','2',[{'line_id':'fragment'}],True)
+        separate=engine.parse_affiliation('Department of Mathematics, Southern University, Shenzhen 518055, China','3',[{'line_id':'other'}],True)
+        merged,fragments,id_map=engine.merge_affiliation_fragments([complete,fragment,separate])
+        self.assertEqual(len(merged),2)
+        self.assertEqual(merged[0]['source_text'],complete['source_text'])
+        self.assertEqual({e['line_id'] for e in merged[0]['evidence']},{'full','fragment'})
+        self.assertEqual(id_map[fragment['id']],complete['id'])
+        self.assertEqual(len(fragments),1)
+
     def test_keyword_list_on_next_pdf_line_is_captured(self):
         with tempfile.TemporaryDirectory() as folder:
             pdf=Path(folder)/'article.pdf'
@@ -401,6 +536,45 @@ class AffiliationTest(unittest.TestCase):
         self.assertEqual(len(md['affiliations']),1)
         self.assertEqual(md['authors'][0]['affiliation_ids'],[])
         self.assertEqual(md['author_groups'],[])
+
+    def test_numbered_author_prefixes_and_comma_delimiters_link_in_pdf_order(self):
+        md=self.pdf_metadata([
+            (75,'An article title',16),
+            (102,'1- Ada Lovelace, 2- Grace Hopper',12),
+            (145,'1, PhD Student, Department of Mathematics, Example University, Norfolk, VA, USA',9),
+            (165,'2, Associated professor, Institute of Computing, Example University, Tehran, Iran',9),
+            (225,'Abstract',11),(240,'A sufficiently long abstract for the author marker regression.',10),
+        ],[{'given_name':'Ada','surname':'Lovelace'},
+           {'given_name':'Grace','surname':'Hopper'}])
+        self.assertEqual([a['markers'] for a in md['authors']],[['1'],['2']])
+        self.assertEqual([a['affiliation_ids'] for a in md['authors']],[['aff-1'],['aff-2']])
+        self.assertEqual([g['author_ids'] for g in md['author_groups']],[['author-1'],['author-2']])
+        self.assertEqual([f['city'] for f in md['affiliations']],['Norfolk','Tehran'])
+
+    def test_named_acronym_organization_street_uk_postcode_and_xml_tags(self):
+        curl=engine.parse_affiliation(
+            'Cosmology, Universe and Relativity at Louvain (CURL), Institute of Mathematics and Physics, '
+            'University of Louvain, 2 Chemin du Cyclotron, 1348 Louvain-la-Neuve, Belgium','b',[])
+        lancaster=engine.parse_affiliation(
+            'Consortium for Fundamental Physics, Physics Department, Lancaster University, '
+            'Lancaster LA1 4YB, United Kingdom','a',[])
+        self.assertEqual(curl['organizations'],[
+            'Cosmology, Universe and Relativity at Louvain (CURL)',
+            'Institute of Mathematics and Physics','University of Louvain'])
+        self.assertEqual(curl['address_parts'],['2 Chemin du Cyclotron'])
+        self.assertEqual((curl['city'],curl['postal_code'],curl['country_code']),
+                         ('Louvain-la-Neuve','1348','BEL'))
+        self.assertEqual((lancaster['city'],lancaster['postal_code'],lancaster['country_code']),
+                         ('Lancaster','LA1 4YB','GBR'))
+        metadata={'base_id':'2507.15522','version':1,'title':'Sample','abstract':'Text',
+                  'authors':[{'id':'author-1','global_seq':1,'given_name':'Eemeli','surname':'Tomberg',
+                              'initials':'E.','affiliation_ids':['aff-b']}],
+                  'affiliations':[curl],'author_groups':[{'author_ids':['author-1'],'affiliation_id':'aff-b'}],
+                  'keywords':[],'references':[],'profile':{}}
+        root=engine.secure_xml(engine.build_xml(metadata).encode('utf-8'))
+        affiliation=root.xpath('.//*[local-name()="affiliation"]')[0]
+        self.assertEqual(affiliation.xpath('./*[local-name()="address-part"]/text()'),['2 Chemin du Cyclotron'])
+        self.assertEqual(affiliation.xpath('./*[local-name()="city"]/text()'),['Louvain-la-Neuve'])
 
     @unittest.skipUnless(shutil.which('tesseract'),'Local Tesseract is optional')
     def test_image_only_pdf_uses_coordinate_aware_local_ocr(self):

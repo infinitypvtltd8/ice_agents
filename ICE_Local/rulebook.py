@@ -192,18 +192,27 @@ def selected(job, role):
 
 # ID and version -------------------------------------------------------------
 
-@rule('id_missing', 'ID and version', 'The PDF is missing its article ID.')
+@rule('id_missing', 'Special cases', 'The PDF is missing its arXiv ID and/or version.')
 def id_missing(ctx):
-    if not ctx.md.get('base_id'):
-        return 'No arXiv ID was found in the PDF.', []
+    md=ctx.md
+    support_derived=str(md.get('id_capture_source','')).startswith('HTML + SCRAPPING')
+    pdf_id=md.get('pdf_base_id') if 'pdf_base_id' in md else '' if support_derived else md.get('base_id')
+    pdf_version=md.get('pdf_version') if 'pdf_version' in md else None if support_derived else md.get('version')
+    missing=[]
+    if not pdf_id:missing.append('arXiv ID')
+    if pdf_version is None:missing.append('version')
+    if missing:
+        return 'The PDF is missing its '+(' and/or '.join(missing))+'.', md.get('field_evidence',{}).get('base_id',[])[:1]
 
 
-@rule('id_version_mismatch', 'ID and version',
+@rule('id_version_mismatch', 'Special cases',
       "The PDF's ID and/or version does not match the HTML and/or Scrapping source.",
       choices={'compare_with': tuple(SOURCES)}, compare_with=['SCRAPPING', 'HTML'])
 def id_version_mismatch(ctx):
     md, s = ctx.md, ctx.md.get('source_values', {})
-    pdf_id, pdf_version = md.get('base_id'), md.get('version')
+    support_derived=str(md.get('id_capture_source','')).startswith('HTML + SCRAPPING')
+    pdf_id=md.get('pdf_base_id') if 'pdf_base_id' in md else '' if support_derived else md.get('base_id')
+    pdf_version=md.get('pdf_version') if 'pdf_version' in md else None if support_derived else md.get('version')
     problems = []
     for role in dict.fromkeys(v.upper() for v in ctx.s['compare_with']):
         if not selected(ctx.job, role):

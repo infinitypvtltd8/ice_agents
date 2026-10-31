@@ -29,12 +29,12 @@
 
 [id_missing]
 on = true
-group = "ID and version"
-text = "The PDF is missing its article ID."
+group = "Special cases"
+text = "The PDF is missing its arXiv ID and/or version."
 
 [id_version_mismatch]
 on = true
-group = "ID and version"
+group = "Special cases"
 text = "The PDF's ID and/or version does not match the HTML and/or Scrapping source."
 # Sources to compare with: "SCRAPPING", "HTML", "API".
 # The HTML version is only compared when the HTML page shows a single version.
