@@ -366,10 +366,15 @@ class Handler(BaseHTTPRequestHandler):
                         if j['status']!='READY':manifest.append({'id':jid,'status':'SKIPPED_NOT_READY'});continue
                         root=jobdir(jid);package_token=re.sub(r'[^\w.-]','_',j.get('package_name','Package')).strip('._') or 'Package'
                         prefix=package_token+'/'+re.sub(r'[^\w.-]','_',j['article_id'])+'_'+jid[:8]+'/'
-                        valid=engine.validate_xml(j.get('xml',''),j['metadata'])['profile_valid']
+                        validation=engine.validate_xml(j.get('xml',''),j['metadata'])
+                        valid=validation['profile_valid']
                         state='READY' if valid else 'INVALID_DRAFT'
+                        j['export_status']='EXPORTED';j['validation']=validation
+                        openissues=[i for i in j.get('issues',[]) if i['status']=='OPEN']
+                        audit(j,'EXPORT',{'status':'EXPORTED','revision':j['revision'],'sha256':engine.digest(j.get('xml','')),'unresolved_issues':[i['id'] for i in openissues],'manual_xml':j['manual_xml'],'xml_stale':j['xml_stale'],'batch':True})
+                        save_job(j)
                         z.writestr(prefix+j['article_id']+'_'+state+'.xml',j.get('xml',''))
-                        z.writestr(prefix+'audit.json',json.dumps({'events':j['audit'],'issues':j['issues'],'validation':j.get('validation'),'triage':j.get('triage')},ensure_ascii=False,indent=2))
+                        z.writestr(prefix+'audit.json',json.dumps({'events':j['audit'],'issues':j['issues'],'validation':validation,'triage':j.get('triage')},ensure_ascii=False,indent=2))
                         if include_sources:
                             for f in j['files']:z.write(root/f['path'],prefix+'sources/'+f['id']+'_'+re.sub(r'[^\w.-]','_',f['name'].split('/')[-1]))
                         manifest.append({'id':jid,'package':j.get('package_name'),'article_id':j['article_id'],'status':state,'references':len(j['metadata']['references']),'authors':len(j['metadata']['authors']),'issues':sum(i['status']=='OPEN' for i in j.get('issues',[]))})

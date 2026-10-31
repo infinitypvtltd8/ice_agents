@@ -207,6 +207,12 @@ class AffiliationTest(unittest.TestCase):
               'internal_linked_words':['2','3']}
         self.assertEqual(engine.reference_line_text(line),
                          '[4] A. Author, A reference title, 2024.')
+        citation={'text':'A. Author. A title. (cit. on pp. 4, 20, 23, 25).',
+                  'internal_linked_words':['4','20','23','25']}
+        self.assertEqual(engine.reference_line_text(citation),'A. Author. A title.')
+        punctuated={'text':'A. Author. A title. (cit. on p. 5).',
+                    'internal_linked_words':['5']}
+        self.assertEqual(engine.reference_line_text(punctuated),'A. Author. A title.')
         external={'text':'[4] A. Author, https://example.org/paper, 2024. 2'}
         self.assertEqual(engine.reference_line_text(external),external['text'])
 

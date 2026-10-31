@@ -149,6 +149,9 @@ class AppTest(unittest.TestCase):
         with zipfile.ZipFile(io.BytesIO(data)) as z:
             self.assertIsNone(z.testzip());self.assertTrue(any(n.endswith('.xml') for n in z.namelist()))
             self.assertTrue(any('/sources/' in n for n in z.namelist()))
+        exported=self.call('/api/jobs/'+j['id'])
+        self.assertEqual(exported['export_status'],'EXPORTED')
+        self.assertEqual(exported['audit'][-1]['action'],'EXPORT')
         cleared=self.call('/api/clear',{'job_ids':[j['id']]})
         self.assertEqual(cleared['removed'],[j['id']]);self.assertNotIn(j['id'],[v['id'] for v in self.call('/api/jobs')])
     def test_7_review_findings_never_block_or_move_xml_out_of_general(self):

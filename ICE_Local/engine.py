@@ -13,7 +13,7 @@ from pathlib import Path
 import fitz
 from lxml import etree, html
 
-VERSION = '1.4.6'
+VERSION = '1.4.7'
 ANI = 'http://www.elsevier.com/xml/ani/ani'
 CE = 'http://www.elsevier.com/xml/ani/common'
 XML = 'http://www.w3.org/XML/1998/namespace'
@@ -378,11 +378,12 @@ def extract_layout(pdf, settings, progress=lambda x:None):
             if position:line_by_position[(int(position[1]),int(position[2]))]=line
         internal_links=[fitz.Rect(link['bbox']) for link in links if link['internal']]
         for word in native_words:
-            if not re.fullmatch(r'\d{1,4}[,;.]?',word['text'].strip()):continue
+            numeric_word=re.fullmatch(r'[([{]?\s*(\d{1,4})\s*[),;.:\]]*',word['text'].strip())
+            if not numeric_word:continue
             box=fitz.Rect(word['bbox'])
             if not any(box.intersects(target) and (target & box).get_area()>=min(box.get_area(),target.get_area())*.35 for target in internal_links):continue
             line=line_by_position.get((word['block'],word['line']))
-            if line:line.setdefault('internal_linked_words',[]).append(word['text'].strip(' ,;.'))
+            if line:line.setdefault('internal_linked_words',[]).append(numeric_word[1])
         pages.append({'number':pi+1,'width':page.rect.width,'height':page.rect.height,'rotation':page.rotation,
                       'text_origin':'OCR' if lines and lines[0]['origin']=='OCR' else 'NATIVE',
                       'lines':lines,'words':[w for l in lines for w in l['words']] if lines and lines[0]['origin']=='OCR' else native_words,'links':links})
@@ -1509,9 +1510,18 @@ def footnote_references(layout):
 def reference_line_text(line):
     """Drop only trailing numeric labels linked to an internal PDF page target."""
     text=str(line.get('text','')).rstrip()
-    linked=[str(x).strip(' ,;.') for x in line.get('internal_linked_words',[])]
+    linked=[str(x).strip(' ,;.)]') for x in line.get('internal_linked_words',[])]
+    # Some publishers place linked same-document page locators in a trailing
+    # parenthetical, e.g. ``(cit. on pp. 4, 20, 23, 25)``. Drop that locator
+    # only when every printed page number is confirmed as an internal link.
+    citation=re.search(r'\s*\((?:cit(?:ed)?\.?\s+on\s+)?pp?\.?\s*((?:\d{1,4})(?:\s*[-–]\s*\d{1,4})?(?:\s*[,;]\s*\d{1,4}(?:\s*[-–]\s*\d{1,4})?)*)\s*\)\s*[.,;]?\s*$',text,re.I)
+    if citation:
+        pages=re.findall(r'\d{1,4}',citation[1])
+        if pages and all(page in linked for page in pages):
+            text=text[:citation.start()].rstrip(' ,;')
+            for page in pages:linked.remove(page)
     while linked:
-        match=re.search(r'(\d{1,4})\s*[,;.]?\s*$',text)
+        match=re.search(r'(\d{1,4})\s*[,;.)\]]*\s*$',text)
         if not match or match[1] not in linked:break
         linked.remove(match[1]);text=text[:match.start()].rstrip(' ,;')
     return text
@@ -1522,7 +1532,7 @@ def is_page_number_artifact(line, page_height):
     if len(text)>14 or not re.fullmatch(r'[\W_]*\d{1,4}[\W_]*',text,re.UNICODE):
         return False
     box=line.get('bbox') or (0,0,0,0)
-    return box[1] < 45 or box[3] > page_height-65
+    return box[1] < 45 or box[3] > page_height-85
 
 def extract_references(layout):
     issues=[];lines=[]

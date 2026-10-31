@@ -1,6 +1,6 @@
 # infinity-ACE
 
-OCR Tool. **ICE Local 1.4.6** is a citation extraction app. In local mode, files are processed on your own computer: no AI/LLM calls and no internet needed to process them. No login or internet connection is needed for the local workspace.
+OCR Tool. **ICE Local 1.4.7** is a citation extraction app. In local mode, files are processed on your own computer: no AI/LLM calls and no internet needed to process them. No login or internet connection is needed for the local workspace.
 
 This is a bundled Python application. There is no `npm install` or `npm start` step.
 
