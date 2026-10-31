@@ -1,0 +1,16 @@
+data/
+exports/
+tmp/
+.review_out_copy/
+ICE_XML_batch_10/
+REDCAR_SCHEMA_FIXED/
+runtime/
+tests/
+tools/
+__pycache__/
+*.xml
+*.zip
+!samples/
+!samples/*.zip
+*.pdf
+*.log

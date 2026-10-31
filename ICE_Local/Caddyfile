@@ -1,0 +1,4 @@
+{$ICE_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy ice:8080
+}

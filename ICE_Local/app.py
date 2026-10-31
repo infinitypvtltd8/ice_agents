@@ -506,7 +506,7 @@ def main():
     parser=argparse.ArgumentParser();parser.add_argument('--host',default=os.environ.get('ICE_HOST','127.0.0.1'));parser.add_argument('--port',type=int,default=int(os.environ.get('PORT','8765')));parser.add_argument('--no-browser',action='store_true');args=parser.parse_args()
     if args.host not in ('127.0.0.1','localhost','::1'):
         password=os.environ.get('ICE_ACCESS_PASSWORD','')
-        if len(password)<24:raise SystemExit('Public hosting requires ICE_ACCESS_PASSWORD with at least 24 characters. Add it as a Replit deployment secret.')
+        if len(password)<24:raise SystemExit('Public hosting requires ICE_ACCESS_PASSWORD with at least 24 characters. Set it as a server-side deployment secret; never put it in source control.')
     install_network_guard()
     # Restore interrupted queue jobs on a clean restart.
     for j in all_jobs():

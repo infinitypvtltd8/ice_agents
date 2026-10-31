@@ -1,0 +1,42 @@
+services:
+  ice:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      ICE_HOST: 0.0.0.0
+      ICE_DATA_DIR: /data
+      ICE_ACCESS_PASSWORD: ${ICE_ACCESS_PASSWORD:?Set ICE_ACCESS_PASSWORD in the deployment environment}
+      ICE_ALLOWED_HOSTS: ${ICE_DOMAIN:?Set ICE_DOMAIN to the public hostname}
+    volumes:
+      - ice-data:/data
+    expose:
+      - "8080"
+    networks:
+      - ice-internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      ICE_DOMAIN: ${ICE_DOMAIN:?Set ICE_DOMAIN to the public hostname}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - ice
+    networks:
+      - ice-internal
+
+volumes:
+  ice-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  ice-internal:
