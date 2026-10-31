@@ -13,7 +13,7 @@ from pathlib import Path
 import fitz
 from lxml import etree, html
 
-VERSION = '1.4.7'
+VERSION = '1.4.8'
 ANI = 'http://www.elsevier.com/xml/ani/ani'
 CE = 'http://www.elsevier.com/xml/ani/common'
 XML = 'http://www.w3.org/XML/1998/namespace'
@@ -23,7 +23,7 @@ STAMP_RE = re.compile(r'arXiv\s*:\s*(\d{4}\.\d{4,5})(?:v(\d+))?', re.I)
 DOC_WORDS = contextvars.ContextVar('document_words', default=frozenset())
 EMAIL_RE = re.compile(r'[\w.!#$%&\x27*+/=?^`{|}~-]+@[\w.-]+\.[A-Za-z]{2,}', re.U)
 ORCID_RE = re.compile(r'(?<!\d)(\d{4}-\d{4}-\d{4}-[\dX]{4})(?!\d)', re.I)
-STOP_HEAD = re.compile(r'^(?:\d+(?:\.\d+)*\s+|[IVX]+\.\s*)?(?:INTRODUCTION|ACKNOWLEDGMENTS?|ACKNOWLEDGEMENTS?|APPENDIX|CONCLUSIONS?|DATA AVAILABILITY|SUPPLEMENT)', re.I)
+STOP_HEAD = re.compile(r'^(?:\d+(?:\.\d+)*\s+|[IVX]+\.\s*)?(?:[A-Z]\s+(?:OUTLINE|INTRODUCTION|PRELIMINARIES|NOTATION|PROOFS|APPENDIX|BACKGROUND)\b|INTRODUCTION|ACKNOWLEDGMENTS?|ACKNOWLEDGEMENTS?|APPENDIX|CONCLUSIONS?|DATA AVAILABILITY|SUPPLEMENT)', re.I)
 REF_HEAD = re.compile(r'^(?:\d+\.?\s+)?(?:References|Bibliography|Reference List|List of Cited References|Recommended Reading|Further Reading)\s*$', re.I)
 ORG = re.compile(r'\b(?:university|université|universität|universidad|universidade|universit[aàá]|institute\w*|institut\w*|laborator\w*|department|dept\.?|school|college|faculty|centre|center|research|academy|academia|hospital|clinic|observatory|foundation|polytechnic|consortium|collaboration|cnrs|mit|jila|umr|skl-iotsc|uc\s+berkeley|uc\s+san\s+diego|ucsd|thermo\s+fisher\s+scientific|inc\.?|corporation|division|group|unit)\b|\([A-Z][A-Z0-9-]{1,10}\)', re.I)
 STATES = {
@@ -378,12 +378,16 @@ def extract_layout(pdf, settings, progress=lambda x:None):
             if position:line_by_position[(int(position[1]),int(position[2]))]=line
         internal_links=[fitz.Rect(link['bbox']) for link in links if link['internal']]
         for word in native_words:
-            numeric_word=re.fullmatch(r'[([{]?\s*(\d{1,4})\s*[),;.:\]]*',word['text'].strip())
+            numeric_word=re.fullmatch(r'[([{]?\s*(\d{1,4})(?:\s*[-–]\s*(\d{1,4}))?\s*[),;.:\]]*',word['text'].strip())
             if not numeric_word:continue
             box=fitz.Rect(word['bbox'])
             if not any(box.intersects(target) and (target & box).get_area()>=min(box.get_area(),target.get_area())*.35 for target in internal_links):continue
             line=line_by_position.get((word['block'],word['line']))
-            if line:line.setdefault('internal_linked_words',[]).append(numeric_word[1])
+            if line:
+                start=int(numeric_word[1]);end=int(numeric_word[2] or numeric_word[1])
+                if end>=start and end-start<=50:
+                    line.setdefault('internal_linked_words',[]).extend(str(n) for n in range(start,end+1))
+                else:line.setdefault('internal_linked_words',[]).append(numeric_word[1])
         pages.append({'number':pi+1,'width':page.rect.width,'height':page.rect.height,'rotation':page.rotation,
                       'text_origin':'OCR' if lines and lines[0]['origin']=='OCR' else 'NATIVE',
                       'lines':lines,'words':[w for l in lines for w in l['words']] if lines and lines[0]['origin']=='OCR' else native_words,'links':links})
@@ -1507,24 +1511,31 @@ def footnote_references(layout):
         if current:footnotes.append(current)
     return footnotes
 
-def reference_line_text(line):
-    """Drop only trailing numeric labels linked to an internal PDF page target."""
-    text=str(line.get('text','')).rstrip()
-    linked=[str(x).strip(' ,;.)]') for x in line.get('internal_linked_words',[])]
+def strip_internal_citation_locators(text, linked_words):
+    """Remove trailing same-document locators only when PDF links confirm them."""
+    text=str(text).rstrip()
+    linked=[str(x).strip(' ,;.)]') for x in linked_words]
     # Some publishers place linked same-document page locators in a trailing
     # parenthetical, e.g. ``(cit. on pp. 4, 20, 23, 25)``. Drop that locator
     # only when every printed page number is confirmed as an internal link.
-    citation=re.search(r'\s*\((?:cit(?:ed)?\.?\s+on\s+)?pp?\.?\s*((?:\d{1,4})(?:\s*[-–]\s*\d{1,4})?(?:\s*[,;]\s*\d{1,4}(?:\s*[-–]\s*\d{1,4})?)*)\s*\)\s*[.,;]?\s*$',text,re.I)
-    if citation:
+    citation_re=re.compile(r'\s*\((?:cit(?:ed)?\.?\s+on\s+)?pp?\.?\s*((?:\d{1,4})(?:\s*[-–]\s*\d{1,4})?(?:\s*[,;]\s*\d{1,4}(?:\s*[-–]\s*\d{1,4})?)*)\s*\)\s*[.,;]?',re.I)
+    for citation in reversed(list(citation_re.finditer(text))):
         pages=re.findall(r'\d{1,4}',citation[1])
         if pages and all(page in linked for page in pages):
-            text=text[:citation.start()].rstrip(' ,;')
+            text=text[:citation.start()]+text[citation.end():]
             for page in pages:linked.remove(page)
     while linked:
         match=re.search(r'(\d{1,4})\s*[,;.)\]]*\s*$',text)
         if not match or match[1] not in linked:break
+        # If the page number is wrapped onto this line after ``p.``/``pp.``,
+        # preserve it for the post-join pass that can remove the full locator.
+        if re.search(r'\bpp?\.?\s*$',text[:match.start()].rstrip(),re.I):break
         linked.remove(match[1]);text=text[:match.start()].rstrip(' ,;')
     return text
+
+def reference_line_text(line):
+    """Drop only trailing numeric labels linked to an internal PDF page target."""
+    return strip_internal_citation_locators(line.get('text',''),line.get('internal_linked_words',[]))
 
 def is_page_number_artifact(line, page_height):
     """Recognize isolated page-number ornaments without dropping citation text."""
@@ -1579,8 +1590,12 @@ def extract_references(layout):
                     # Do not consume a later independent numbered region.
                     if l!=lines[start] and re.match(r'^\[\d+\]',l['text']):break
                     use.append(l)
-                clean=[firsttext]+[reference_line_text(l) for l in use[1:]]
-                candidate_text=join_text(clean)
+                # Join the source lines before removing links. A page locator
+                # can wrap between ``pp. 4, 19, 20, 22,`` and ``23).``; cleaning
+                # each line first destroys the evidence needed to recognize it.
+                candidate_text=join_text([l['text'] for l in use])
+                linked=[word for l in use for word in l.get('internal_linked_words',[])]
+                candidate_text=strip_internal_citation_locators(candidate_text,linked)
                 candidates.append({'label':str(label),'text':candidate_text,'evidence':evidence(use),'region':runno+1,'lines':use})
             numbers=[n for _,n,_ in run]
             if numbers!=list(range(numbers[0],numbers[-1]+1)):issues.append(issue('REF-018','references','Source numbering contains gaps. Inspect the reference coverage.'))
@@ -1598,7 +1613,9 @@ def extract_references(layout):
                 if ri+1==len(keyed_labels) and l['id'].rsplit('-l',1)[0]!=lines[start]['id'].rsplit('-l',1)[0]:break
                 if l!=lines[start] and (STOP_HEAD.match(l['text']) or REF_HEAD.match(l['text'].strip())):break
                 use.append(l)
-            candidate_text=join_text([reference_line_text(l) for l in use])
+            candidate_text=join_text([l['text'] for l in use])
+            linked=[word for l in use for word in l.get('internal_linked_words',[])]
+            candidate_text=strip_internal_citation_locators(candidate_text,linked)
             candidates.append({'label':label,'text':candidate_text,
                                'evidence':evidence(use),'region':1,'lines':use})
         issues.append(issue('REF-006','references','Unnumbered references were separated by their printed bracketed citation keys. Review their boundaries.',candidates[0]['evidence'][:1] if candidates else []))
